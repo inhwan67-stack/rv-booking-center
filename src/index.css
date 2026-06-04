@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color: #111827;
+  background: #f8fafc;
+  font-family:
+    Pretendard, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.section-shell {
+  @apply mx-auto w-full max-w-7xl px-5 sm:px-6 lg:px-8;
+}
+
+.eyebrow {
+  @apply text-sm font-bold tracking-wide text-signal-orange;
+}
+
+.section-title {
+  @apply text-2xl font-bold tracking-tight text-navy-900 sm:text-3xl lg:text-4xl;
+}
+
+.section-copy {
+  @apply mt-4 max-w-3xl text-base leading-7 text-slate-600;
+}
