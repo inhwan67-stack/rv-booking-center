@@ -28,3 +28,12 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+
+### Node / Vite ###
+node_modules/
+dist/
+.env
+
+### IDE ###
+.idea/
+*.iml
