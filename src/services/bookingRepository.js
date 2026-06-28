@@ -25,12 +25,12 @@ export async function createBooking(formData) {
     region: formData.region.trim(),
     vehicleType: formData.vehicleType,
     vehicleModel: formData.vehicleModel.trim(),
-    year: formData.year.trim(),
+    year: formData.desiredDate || formData.year || '',
     service: formData.service,
-    vehicleStatus: formData.status,
-    message: formData.message.trim(),
+    vehicleStatus: buildVehicleStatus(formData),
+    message: buildBookingMessage(formData),
     photoUrls,
-    processStatus: '접수',
+    processStatus: '접수 완료',
     createdAt,
   };
 
@@ -166,4 +166,68 @@ function getLocalBookings() {
 
 function getFileExtension(fileName) {
   return fileName.split('.').pop()?.toLowerCase() || 'jpg';
+}
+
+function buildVehicleStatus(formData) {
+  const statusItems = [
+    formData.vehicleNumber && `차량번호: ${formData.vehicleNumber}`,
+    formData.desiredDate && `희망 날짜: ${formData.desiredDate}`,
+  ].filter(Boolean);
+
+  return statusItems.join(' / ') || formData.status || '';
+}
+
+function buildBookingMessage(formData) {
+  const sections = [];
+
+  if (formData.message?.trim()) {
+    sections.push(`[문의 내용]\n${formData.message.trim()}`);
+  }
+
+  const basicInfo = [
+    formData.vehicleNumber && `차량번호: ${formData.vehicleNumber}`,
+    formData.desiredDate && `희망 날짜: ${formData.desiredDate}`,
+  ].filter(Boolean);
+
+  if (basicInfo.length) {
+    sections.push(`[기본 정보]\n${basicInfo.join('\n')}`);
+  }
+
+  const isCaravan =
+    formData.vehicleType === '카라반' || formData.vehicleType === '수입 카라반';
+  if (isCaravan) {
+    const caravanInfo = [
+      `견인차 보유 여부: ${formData.hasTowVehicle ? '예' : '아니오'}`,
+      `트레일러 견인면허 보유 여부: ${
+        formData.hasTrailerLicense ? '예' : '아니오'
+      }`,
+      `탁송 필요 여부: ${formData.needsDelivery ? '예' : '아니오'}`,
+    ];
+    sections.push(`[카라반 확인]\n${caravanInfo.join('\n')}`);
+  }
+
+  if (formData.service === '카라반 탁송') {
+    const deliveryInfo = [
+      formData.departure && `출발지: ${formData.departure}`,
+      formData.destination && `도착지: ${formData.destination}`,
+      formData.deliveryPurpose && `탁송 목적: ${formData.deliveryPurpose}`,
+    ].filter(Boolean);
+
+    if (deliveryInfo.length) {
+      sections.push(`[탁송 정보]\n${deliveryInfo.join('\n')}`);
+    }
+  }
+
+  if (formData.service === '정비 상담/업체 연결' && formData.repairSymptoms?.length) {
+    sections.push(`[정비 증상]\n${formData.repairSymptoms.join(', ')}`);
+  }
+
+  if (
+    formData.service === '중고 위탁점검' &&
+    formData.usedInspectionItems?.length
+  ) {
+    sections.push(`[점검 희망 항목]\n${formData.usedInspectionItems.join(', ')}`);
+  }
+
+  return sections.join('\n\n');
 }
