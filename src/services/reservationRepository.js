@@ -1,57 +1,10 @@
+import { isSupabaseConfigured, supabase } from '../lib/supabaseClient.js';
 import {
   loadReservations,
   saveReservations,
 } from './reservationStorage.js';
 
-/*
-Supabase table: reservations
-
-Columns:
-- id
-- receipt_number
-- created_at
-- customer_name
-- phone
-- vehicle_type
-- service_type
-- region
-- preferred_date
-- vehicle_number
-- vehicle_model
-- message
-- has_attachment
-- attachment_note
-- status
-- admin_memo
-- departure_location
-- arrival_location
-- towing_purpose
-- symptoms
-- inspection_items
-- has_tow_vehicle
-- has_trailer_license
-- needs_towing
-
-Frontend -> Supabase mapping:
-- receiptNumber -> receipt_number
-- createdAt -> created_at
-- customerName -> customer_name
-- vehicleType -> vehicle_type
-- serviceType -> service_type
-- preferredDate -> preferred_date
-- vehicleNumber -> vehicle_number
-- vehicleModel -> vehicle_model
-- hasAttachment -> has_attachment
-- attachmentNote -> attachment_note
-- adminMemo -> admin_memo
-- departureLocation -> departure_location
-- arrivalLocation -> arrival_location
-- towingPurpose -> towing_purpose
-- inspectionItems -> inspection_items
-- hasTowVehicle -> has_tow_vehicle
-- hasTrailerLicense -> has_trailer_license
-- needsTowing -> needs_towing
-*/
+const RESERVATIONS_TABLE = 'reservations';
 
 export function mapReservationToSupabaseRow(reservation) {
   return {
@@ -112,26 +65,59 @@ export function mapSupabaseRowToReservation(row) {
 }
 
 export async function createReservation(reservation) {
-  // TODO: 실제 운영 시 Supabase reservations 테이블 insert 로직으로 교체합니다.
-  const reservations = loadReservations();
-  const nextReservations = [reservation, ...reservations];
-  saveReservations(nextReservations);
-  return reservation;
+  const supabaseSaved = await insertReservationToSupabase(reservation);
+  saveReservationToLocalStorage(reservation);
+
+  return {
+    reservation,
+    storage: supabaseSaved ? 'supabase-localStorage' : 'localStorage',
+    supabaseSaved,
+  };
 }
 
 export async function getReservations() {
-  // TODO: 실제 운영 시 Supabase reservations 테이블 select 로직으로 교체합니다.
   return loadReservations();
 }
 
 export async function updateReservationStatus(reservationId, status) {
-  // TODO: 실제 운영 시 Supabase reservations 테이블 update(status) 로직으로 교체합니다.
   return updateReservation(reservationId, { status });
 }
 
 export async function updateReservationMemo(reservationId, adminMemo) {
-  // TODO: 실제 운영 시 Supabase reservations 테이블 update(admin_memo) 로직으로 교체합니다.
   return updateReservation(reservationId, { adminMemo });
+}
+
+async function insertReservationToSupabase(reservation) {
+  if (!isSupabaseConfigured || !supabase) {
+    console.info('Supabase is not configured. Reservation saved to localStorage only.');
+    return false;
+  }
+
+  try {
+    const { error } = await supabase
+      .from(RESERVATIONS_TABLE)
+      .insert(mapReservationToSupabaseRow(reservation));
+
+    if (error) {
+      throw error;
+    }
+
+    console.info('Supabase reservation insert succeeded:', {
+      receiptNumber: reservation.receiptNumber,
+    });
+    return true;
+  } catch (error) {
+    console.error('Supabase reservation insert failed:', error);
+    return false;
+  }
+}
+
+function saveReservationToLocalStorage(reservation) {
+  const reservations = loadReservations();
+  const nextReservations = reservations.some((item) => item.id === reservation.id)
+    ? reservations
+    : [reservation, ...reservations];
+  saveReservations(nextReservations);
 }
 
 async function updateReservation(reservationId, patch) {

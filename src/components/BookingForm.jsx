@@ -344,6 +344,8 @@ export default function BookingForm({ selectedService, onBookingCreated }) {
         ...submittedSummary,
         receiptNumber: result.booking.receiptNumber,
         createdAt: result.booking.createdAt,
+        storage: result.storage,
+        supabaseSaved: result.supabaseSaved,
       });
       resetForm();
       onBookingCreated?.(result.booking);
@@ -619,6 +621,7 @@ function SubmissionComplete({ booking, onStartAnother, onShowServices }) {
               상담 신청이 접수되었습니다
             </h3>
             <div className="mt-4 grid gap-3 text-sm leading-6 text-slate-700">
+              <p>접수 정보가 저장되었습니다.</p>
               <p>
                 입력해주신 차량 정보와 상담 내용을 확인한 후 담당자가 연락드릴
                 예정입니다.

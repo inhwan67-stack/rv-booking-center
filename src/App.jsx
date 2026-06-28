@@ -26,7 +26,9 @@ export default function App() {
 
   const handleBookingCreated = (reservation) => {
     setReservations((current) => {
-      const nextReservations = [reservation, ...current];
+      const nextReservations = current.some((item) => item.id === reservation.id)
+        ? current
+        : [reservation, ...current];
       saveReservations(nextReservations);
       return nextReservations;
     });
