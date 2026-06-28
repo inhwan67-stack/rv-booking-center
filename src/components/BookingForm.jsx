@@ -342,7 +342,7 @@ export default function BookingForm({ selectedService, onBookingCreated }) {
       const result = await createBooking(formData);
       setSubmittedBooking({
         ...submittedSummary,
-        receiptId: result.booking.id,
+        receiptNumber: result.booking.receiptNumber,
         createdAt: result.booking.createdAt,
       });
       resetForm();
@@ -589,6 +589,7 @@ export default function BookingForm({ selectedService, onBookingCreated }) {
 
 function SubmissionComplete({ booking, onStartAnother, onShowServices }) {
   const summaryItems = [
+    ['접수번호', booking.receiptNumber],
     ['고객명', booking.name],
     ['연락처', booking.phone],
     ['차량 종류', booking.vehicleType],

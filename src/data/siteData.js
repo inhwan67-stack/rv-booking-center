@@ -20,8 +20,8 @@ export const navItems = [
   { label: '서비스 소개', href: '#services' },
   { label: '검사 사전진단', href: '#diagnosis' },
   { label: '구조변경 상담', href: '#consulting' },
+  { label: '예약 조회', href: '#lookup' },
   { label: '전문 플랫폼', href: '#specialized' },
-  { label: '협력업체 모집', href: '#partners' },
   { label: '예약하기', href: '#booking' },
   { label: '관리자', href: '#admin' },
 ];

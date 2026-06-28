@@ -25,12 +25,6 @@ export const serviceOptions = [
   '중고 위탁점검',
 ];
 
-/**
- * @typedef {'접수 완료' | '검토 중' | '추가자료 요청' | '견적 안내' | '예약 확정' | '진행 중' | '완료' | '취소'} BookingStatus
- * @typedef {'캠핑카' | '카라반' | '트레일러' | '수입 카라반' | '기타 특수차량'} VehicleType
- * @typedef {'검사 예약' | '구조변경 상담' | '카라반 탁송' | '정비 상담/업체 연결' | '중고 위탁점검'} BookingService
- */
-
 export const mapBookingToSupabaseRow = (booking) => ({
   id: booking.id,
   name: booking.name,

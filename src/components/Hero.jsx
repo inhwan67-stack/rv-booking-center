@@ -1,10 +1,14 @@
 import React from 'react';
-import { ArrowRight, CheckCircle2, ClipboardCheck, Truck } from 'lucide-react';
+import { ArrowRight, CheckCircle2, ClipboardCheck, Search, Truck } from 'lucide-react';
 import { trustStats } from '../data/siteData.js';
 import heroImage from '../assets/rv-inspection-hero.png';
 
 const scrollToBooking = () => {
   document.querySelector('#booking')?.scrollIntoView({ behavior: 'smooth' });
+};
+
+const scrollToLookup = () => {
+  document.querySelector('#lookup')?.scrollIntoView({ behavior: 'smooth' });
 };
 
 export default function Hero() {
@@ -31,7 +35,7 @@ export default function Hero() {
               정비소 이동이 고객에게 부담이 될 수 있습니다.
             </p>
           </div>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             <button
               type="button"
               onClick={scrollToBooking}
@@ -47,6 +51,14 @@ export default function Hero() {
             >
               카라반 탁송 문의하기
               <Truck size={18} />
+            </button>
+            <button
+              type="button"
+              onClick={scrollToLookup}
+              className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 px-6 py-4 text-base font-bold text-slate-700 transition hover:bg-slate-100"
+            >
+              예약 조회
+              <Search size={18} />
             </button>
           </div>
           <div className="mt-10 grid gap-3 sm:grid-cols-3">

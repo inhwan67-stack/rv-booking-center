@@ -20,6 +20,7 @@ export async function createBooking(formData) {
 
   const booking = {
     id: bookingId,
+    receiptNumber: createReceiptNumber(),
     name: formData.name.trim(),
     phone: formData.phone.trim(),
     region: formData.region.trim(),
@@ -50,7 +51,10 @@ export async function createBooking(formData) {
     throw error;
   }
 
-  const savedBooking = mapSupabaseRowToBooking(data);
+  const savedBooking = {
+    ...mapSupabaseRowToBooking(data),
+    receiptNumber: booking.receiptNumber,
+  };
   await notifyAdminBookingCreated(savedBooking);
   return { booking: savedBooking, storage: 'supabase' };
 }
@@ -166,6 +170,10 @@ function getLocalBookings() {
 
 function getFileExtension(fileName) {
   return fileName.split('.').pop()?.toLowerCase() || 'jpg';
+}
+
+function createReceiptNumber() {
+  return `RV-${Date.now().toString().slice(-6)}`;
 }
 
 function buildVehicleStatus(formData) {
