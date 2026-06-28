@@ -7,10 +7,14 @@ export default function ProblemSection() {
     <section className="bg-slate-50 py-16 lg:py-24">
       <div className="section-shell">
         <div className="max-w-3xl">
-          <p className="eyebrow">전문 점검이 필요한 이유</p>
+          <p className="eyebrow">전문 검토가 필요한 이유</p>
           <h2 className="section-title mt-3">
             캠핑카·카라반 검사는 일반 차량과 다릅니다
           </h2>
+          <p className="section-copy">
+            차체 구조, 생활 설비, 견인 안전성, 개조 이력까지 함께 확인해야
+            검사와 이동 과정의 리스크를 줄일 수 있습니다.
+          </p>
         </div>
         <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {problems.map((problem) => (

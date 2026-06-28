@@ -21,7 +21,7 @@ export default function Header() {
               RV 인증관리센터
             </strong>
             <span className="hidden text-xs font-medium text-slate-500 sm:block">
-              검사·정비·구조변경 예약 플랫폼
+              캠핑카·카라반 검사·구조변경·탁송 예약 플랫폼
             </span>
           </span>
         </a>
@@ -45,7 +45,7 @@ export default function Header() {
             className="inline-flex items-center gap-2 rounded-md bg-signal-orange px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-orange-600"
           >
             <PhoneCall size={17} />
-            빠른 상담 신청
+            상담 신청
           </button>
         </div>
 
@@ -80,7 +80,7 @@ export default function Header() {
               }}
               className="mt-2 rounded-md bg-signal-orange px-4 py-3 text-sm font-bold text-white"
             >
-              빠른 상담 신청
+              상담 신청
             </button>
           </nav>
         </div>

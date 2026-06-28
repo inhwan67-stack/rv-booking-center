@@ -9,14 +9,23 @@ export default function Footer() {
             RV 인증관리센터
           </strong>
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            캠핑카·카라반 검사·정비·구조변경 전문 예약 플랫폼
+            캠핑카·카라반 검사, 구조변경, 탁송, 정비 상담을 연결하는
+            특수차량 예약 플랫폼
           </p>
         </div>
         <nav className="flex flex-col gap-2 text-sm font-semibold text-slate-600">
-          <a href="#services" className="hover:text-signal-orange">서비스 소개</a>
-          <a href="#booking" className="hover:text-signal-orange">예약하기</a>
-          <a href="#partners" className="hover:text-signal-orange">협력업체 모집</a>
-          <a href="#privacy" className="hover:text-signal-orange">개인정보처리방침</a>
+          <a href="#services" className="hover:text-signal-orange">
+            서비스 소개
+          </a>
+          <a href="#booking" className="hover:text-signal-orange">
+            예약하기
+          </a>
+          <a href="#partners" className="hover:text-signal-orange">
+            협력업체 모집
+          </a>
+          <a href="#privacy" className="hover:text-signal-orange">
+            개인정보처리방침
+          </a>
         </nav>
         <div className="text-sm text-slate-600">
           <p>
@@ -32,8 +41,9 @@ export default function Footer() {
         <div className="section-shell py-5">
           <p className="text-xs leading-6 text-slate-500">
             본 서비스는 검사 합격을 보장하지 않으며, 차량 상태와 관련 법규 및
-            검사 기준에 따라 결과가 달라질 수 있습니다. 사전진단은 불합격
-            가능성을 줄이기 위한 참고 서비스입니다.
+            검사 기준에 따라 결과가 달라질 수 있습니다. 사전진단과 상담은
+            고객이 검사·구조변경·탁송 필요성을 미리 확인하기 위한 참고
+            서비스입니다.
           </p>
         </div>
       </div>

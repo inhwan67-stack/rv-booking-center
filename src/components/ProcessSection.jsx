@@ -10,7 +10,7 @@ export default function ProcessSection() {
             진행 절차
           </p>
           <h2 className="mt-3 text-2xl font-black tracking-tight sm:text-3xl lg:text-4xl">
-            예약부터 검사 완료까지 간단하게 진행됩니다
+            상담 접수 후 차량 상황에 맞는 다음 단계를 안내합니다
           </h2>
         </div>
 
@@ -25,8 +25,8 @@ export default function ProcessSection() {
               </span>
               <h3 className="mt-5 text-xl font-bold">{step}</h3>
               <p className="mt-3 text-sm leading-6 text-slate-300">
-                {index + 1}단계: 전문가 검토와 협력 네트워크 연결을 통해
-                다음 조치를 명확히 안내합니다.
+                {index + 1}단계: 검사, 구조변경, 탁송, 정비 연결 중 필요한
+                조치를 정리해 다음 진행 방향을 안내합니다.
               </p>
             </article>
           ))}

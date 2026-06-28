@@ -6,8 +6,10 @@ export default function CaseStudies() {
     <section id="cases" className="bg-white py-16 lg:py-24">
       <div className="section-shell">
         <div className="max-w-3xl">
-          <p className="eyebrow">고객 사례</p>
-          <h2 className="section-title mt-3">이런 문제를 해결할 수 있습니다</h2>
+          <p className="eyebrow">상담 예시</p>
+          <h2 className="section-title mt-3">
+            특수차량에서 자주 발생하는 이슈를 미리 확인합니다
+          </h2>
         </div>
         <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
           {cases.map((item) => {

@@ -8,6 +8,7 @@ import ProcessSection from './components/ProcessSection.jsx';
 import BookingForm from './components/BookingForm.jsx';
 import CaseStudies from './components/CaseStudies.jsx';
 import PartnerSection from './components/PartnerSection.jsx';
+import SpecializedSection from './components/SpecializedSection.jsx';
 import CTASection from './components/CTASection.jsx';
 import Footer from './components/Footer.jsx';
 
@@ -26,6 +27,7 @@ export default function App() {
         <AdminDashboard latestBooking={latestBooking} />
         <CaseStudies />
         <PartnerSection />
+        <SpecializedSection />
         <CTASection />
       </main>
       <Footer />

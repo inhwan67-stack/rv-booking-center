@@ -12,10 +12,12 @@ export default function PartnerSection() {
       <div className="section-shell grid gap-10 lg:grid-cols-[1fr_1fr] lg:items-center">
         <div>
           <p className="eyebrow">협력업체 모집</p>
-          <h2 className="section-title mt-3">전국 협력업체를 모집합니다</h2>
+          <h2 className="section-title mt-3">
+            전국 캠핑카·카라반 전문 협력업체를 연결합니다
+          </h2>
           <p className="section-copy">
-            캠핑카 정비업체, 카라반 판매점, 자동차검사 대행업체, 튜닝업체,
-            견인장치 장착점, 자동차 공업사와 함께 전국 네트워크를
+            캠핑카 정비업체, 카라반 판매점, 검사 대행업체, 튜닝업체,
+            견인장치 장착점, 탁송 가능 업체와 함께 특수차량 네트워크를
             구축합니다.
           </p>
           <button
@@ -23,7 +25,7 @@ export default function PartnerSection() {
             onClick={scrollToBooking}
             className="mt-8 rounded-md bg-navy-900 px-6 py-4 text-base font-bold text-white transition hover:bg-navy-800"
           >
-            협력업체 신청하기
+            협력업체 문의하기
           </button>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-soft sm:p-8">

@@ -9,12 +9,12 @@ export default function ServicesSection() {
           <div>
             <p className="eyebrow">서비스 소개</p>
             <h2 className="section-title mt-3">
-              검사 전 리스크부터 중고 구입 점검, 구조변경 상담까지 한 번에
+              검사예약부터 구조변경 상담, 카라반 탁송까지 연결합니다
             </h2>
             <p className="section-copy">
-              차량 상태, 개조 이력, 중량 문제, 지역 정비 가능 여부와 중고
-              구입 전 현장 점검까지 함께 검토해 필요한 예약과 상담으로
-              연결합니다.
+              차량 상태, 개조 이력, 중량 문제, 견인 가능 여부, 중고 구매 전
+              점검 필요성을 함께 검토해 필요한 예약과 상담으로 이어지게
+              합니다.
             </p>
           </div>
         </div>
@@ -39,7 +39,7 @@ export default function ServicesSection() {
                 </p>
                 <div className="mt-5 border-t border-slate-100 pt-4">
                   <span className="text-xs font-bold text-slate-500">
-                    예상 가격
+                    예상 비용
                   </span>
                   <strong className="mt-1 block text-lg font-black text-signal-orange">
                     {service.price}

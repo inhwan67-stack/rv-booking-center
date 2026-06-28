@@ -1,6 +1,7 @@
 import {
   AlertTriangle,
   BadgeCheck,
+  BatteryCharging,
   Building2,
   ClipboardCheck,
   FilePenLine,
@@ -8,9 +9,11 @@ import {
   Handshake,
   History,
   MapPinned,
+  PlugZap,
   Scale,
   SearchCheck,
   ShieldCheck,
+  Truck,
   Wrench,
 } from 'lucide-react';
 
@@ -18,19 +21,19 @@ export const navItems = [
   { label: '서비스 소개', href: '#services' },
   { label: '검사 사전진단', href: '#diagnosis' },
   { label: '구조변경 상담', href: '#consulting' },
+  { label: '전문 플랫폼', href: '#specialized' },
   { label: '협력업체 모집', href: '#partners' },
-  { label: '고객 사례', href: '#cases' },
   { label: '예약하기', href: '#booking' },
   { label: '관리자', href: '#admin' },
 ];
 
 export const problems = [
-  '검사 불합격 항목을 고객이 미리 알기 어렵습니다',
-  '실내 개조 후 구조변경 필요 여부를 판단하기 어렵습니다',
-  '중량 변경, 축하중, 제작허용총중량 문제가 발생할 수 있습니다',
-  '수입 카라반은 국내 제원과 인증 기준 확인이 필요합니다',
-  '보험 수리 후 구조변경이 필요한 경우가 있습니다',
-  '지역별로 믿을 수 있는 대행업체를 찾기 어렵습니다',
+  '캠핑카와 카라반은 중량, 실내 구조, 전기·가스 설비를 일반 차량보다 더 세밀하게 확인해야 합니다.',
+  '튜닝, 실내 개조, 적재 구조 변경, 장비 추가로 구조변경 검토가 필요할 수 있습니다.',
+  '카라반은 견인면허와 운전 경험이 필요해 검사장이나 정비소 이동 자체가 부담이 될 수 있습니다.',
+  '견인장치, 제동장치, 연결부, 하부 상태는 안전성과 검사 결과에 직접 영향을 줍니다.',
+  '캠핑카 전기, 배터리, 히터, 냉장고, 누수 문제는 일반 정비소에서 해결이 어려울 수 있습니다.',
+  '중고 캠핑카·카라반은 누수, 하부, 전기·가스, 구조변경 이력을 구매 전에 확인해야 합니다.',
 ];
 
 export const services = [
@@ -38,55 +41,88 @@ export const services = [
     icon: ClipboardCheck,
     title: '검사 사전진단',
     description:
-      '차량 사진과 기본 정보를 바탕으로 자동차검사 전 불합격 가능 항목을 사전에 점검합니다.',
+      '차량 사진과 기본 정보를 바탕으로 중량, 등화, 하부, 전기·가스 설비, 견인 관련 검사 리스크를 사전에 확인합니다.',
     price: '30,000원부터',
     id: 'diagnosis',
-  },
-  {
-    icon: SearchCheck,
-    title: '중고 구입 출장점검',
-    description:
-      '캠핑카와 카라반을 중고로 구입하기 전 전문가가 현장에 방문해 누수, 하부, 전기, 가스, 견인장치, 개조 이력, 서류 상태를 점검합니다.',
-    price: '150,000원부터',
-  },
-  {
-    icon: MapPinned,
-    title: '검사 대행 예약',
-    description:
-      '지역별 협력업체를 통해 캠핑카와 카라반 자동차검사 대행을 연결합니다.',
-    price: '100,000원부터',
-  },
-  {
-    icon: Wrench,
-    title: '검사 전 정비 연결',
-    description:
-      '등화장치, 타이어, 배터리 고정, 견인장치, 하부 상태 등 검사 불합격 가능 항목을 정비합니다.',
-    price: '별도 견적',
   },
   {
     icon: FilePenLine,
     title: '구조변경 상담',
     description:
-      '실내 개조, 부품 추가, 전기·가스 장치 변경, 중량 변경 등에 따른 구조변경 필요 여부를 상담합니다.',
+      '튜닝, 실내 구조 변경, 장비 추가, 중량 변화, 전기·가스 설비 변경에 따른 구조변경 가능성을 검토합니다.',
     price: '100,000원부터',
     id: 'consulting',
   },
   {
-    icon: Scale,
-    title: '도면수정·중량검토 패키지',
+    icon: Truck,
+    title: '카라반 탁송 문의',
     description:
-      '노후 차량 개조, 보험 수리, 수입 카라반 제원 문제 등에 필요한 도면수정과 중량검토를 지원합니다.',
+      '견인면허나 운전 경험이 부족한 고객을 위해 검사장, 정비소, 보관 장소 이동이 필요한 상황을 상담합니다.',
     price: '별도 견적',
+  },
+  {
+    icon: Wrench,
+    title: '전문 정비업체 연결',
+    description:
+      '캠핑카 전기, 배터리, 히터, 냉장고, 누수, 견인장치처럼 일반 정비소에서 어려운 항목을 전문 업체와 연결합니다.',
+    price: '별도 견적',
+  },
+  {
+    icon: SearchCheck,
+    title: '중고 위탁점검',
+    description:
+      '중고 구매 전 누수, 하부, 제동장치, 전기·가스 설비, 개조 이력, 구조변경 서류를 현장 기준으로 점검합니다.',
+    price: '150,000원부터',
+  },
+  {
+    icon: Scale,
+    title: '도면수정·중량검토',
+    description:
+      '수입 카라반 제원, 장비 추가 후 중량 변화, 보험 수리 이후 구조변경 서류에 필요한 도면과 중량 이슈를 검토합니다.',
+    price: '별도 견적',
+  },
+];
+
+export const specializedReasons = [
+  {
+    icon: ClipboardCheck,
+    title: '특수차량 검사 경험 필요',
+    description:
+      '캠핑카와 카라반은 일반 승용차와 구조가 달라 검사 전 확인해야 할 사항이 많습니다.',
+  },
+  {
+    icon: FilePenLine,
+    title: '구조변경 가능성 검토',
+    description:
+      '튜닝, 내부 구조 변경, 중량 변화, 전기·가스 설비 변경 시 구조변경이 필요할 수 있습니다.',
+  },
+  {
+    icon: ShieldCheck,
+    title: '카라반 견인 안전성',
+    description:
+      '카라반은 견인면허, 견인장치, 운전 경험이 중요하며 검사장 이동 자체가 고객에게 부담이 될 수 있습니다.',
+  },
+  {
+    icon: PlugZap,
+    title: '전문 정비업체 연결',
+    description:
+      '일반 정비소에서 해결하기 어려운 캠핑카 전기, 배터리, 히터, 냉장고, 누수 문제를 전문 업체와 연결할 수 있습니다.',
+  },
+  {
+    icon: BatteryCharging,
+    title: '중고 구매 전 점검 필요',
+    description:
+      '중고 캠핑카와 카라반은 누수, 하부, 전기, 가스, 제동장치, 구조변경 이력을 확인해야 합니다.',
   },
 ];
 
 export const processSteps = [
   '차량 정보 입력',
   '사진 및 서류 업로드',
-  '전문가 사전검토',
-  '검사·정비·구조변경 방향 안내',
-  '지역 협력업체 배정',
-  '검사 완료 및 차량 이력 관리',
+  '전문가 사전 검토',
+  '검사·구조변경·탁송 방향 안내',
+  '협력업체 연결',
+  '예약 진행 및 이력 관리',
 ];
 
 export const cases = [
@@ -104,28 +140,28 @@ export const cases = [
   },
   {
     icon: History,
-    title: '노후 카라반 도면 수정',
+    title: '수입 카라반 도면 수정',
     description:
       '오래된 카라반의 실내 개조 이력과 현재 상태가 달라 도면 수정 방향을 상담한 예시입니다.',
   },
   {
     icon: Gauge,
-    title: '수입 카라반 제원·중량 검토',
+    title: '제원·중량 이슈 검토',
     description:
-      '국내 등록 제원과 실제 장착품, 적재 상태에 따른 중량 문제를 검토한 예시입니다.',
+      '국내 등록 제원과 실제 적재 상태에 따른 중량 문제를 검토해 검사 전 리스크를 줄인 예시입니다.',
   },
 ];
 
 export const partnerBenefits = [
-  '플랫폼을 통한 고객 연결',
+  '플랫폼을 통한 특수차량 고객 연결',
   '검사 전 정비 매출 창출',
   '구조변경 상담 고객 연결',
-  '지역 인증 협력점 홍보',
+  '카라반 탁송 및 견인 네트워크 확장',
   '향후 교육 및 매뉴얼 제공',
 ];
 
 export const trustStats = [
-  { value: '6단계', label: '전문 검토 프로세스', icon: Building2 },
-  { value: '전국', label: '협력 네트워크 확장', icon: Handshake },
-  { value: '사전', label: '불합격 위험 점검', icon: AlertTriangle },
+  { value: '검사', label: '중량·설비·견인 이슈 사전 확인', icon: Building2 },
+  { value: '상담', label: '구조변경 가능성 검토', icon: Handshake },
+  { value: '탁송', label: '카라반 이동 부담 완화', icon: AlertTriangle },
 ];
