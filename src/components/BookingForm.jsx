@@ -381,6 +381,10 @@ export default function BookingForm({ selectedService, onBookingCreated }) {
             차량 정보와 필요한 서비스를 남겨주시면 담당자가 확인 후 가능
             여부, 예상 비용, 진행 일정을 안내드립니다.
           </p>
+          <p className="mt-5 rounded-lg border border-orange-100 bg-orange-50 px-5 py-4 text-sm font-semibold leading-6 text-orange-800">
+            어떤 서비스를 선택해야 할지 모르겠다면 문의 내용을 남겨주세요.
+            담당자가 차량 상태와 상황에 맞는 진행 방법을 안내드립니다.
+          </p>
           <div className="mt-8 rounded-lg border border-navy-100 bg-white p-6">
             <strong className="text-lg font-black text-navy-900">
               첨부 안내

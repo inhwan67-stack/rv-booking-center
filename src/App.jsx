@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import AdminDashboard from './components/AdminDashboard.jsx';
+import AdminArea from './components/AdminArea.jsx';
 import Header from './components/Header.jsx';
 import Hero from './components/Hero.jsx';
 import ProblemSection from './components/ProblemSection.jsx';
@@ -8,6 +8,7 @@ import ProcessSection from './components/ProcessSection.jsx';
 import BookingForm from './components/BookingForm.jsx';
 import BookingLookup from './components/BookingLookup.jsx';
 import CaseStudies from './components/CaseStudies.jsx';
+import FAQSection from './components/FAQSection.jsx';
 import PartnerSection from './components/PartnerSection.jsx';
 import SpecializedSection from './components/SpecializedSection.jsx';
 import CTASection from './components/CTASection.jsx';
@@ -64,16 +65,17 @@ export default function App() {
           selectedService={selectedService}
           onBookingCreated={handleBookingCreated}
         />
-        <AdminDashboard
+        <BookingLookup reservations={reservations} />
+        <AdminArea
           reservations={reservations}
           onReservationUpdate={handleReservationUpdate}
           onReservationsReset={handleReservationsReset}
           onReservationsExport={handleReservationsExport}
         />
-        <BookingLookup reservations={reservations} />
         <CaseStudies />
         <PartnerSection />
         <SpecializedSection />
+        <FAQSection />
         <CTASection />
       </main>
       <Footer />

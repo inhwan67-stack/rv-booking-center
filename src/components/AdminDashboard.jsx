@@ -101,8 +101,8 @@ export default function AdminDashboard({
   };
 
   return (
-    <section id="admin" className="bg-slate-100 py-16 lg:py-24">
-      <div className="section-shell">
+    <section className="bg-slate-100 py-6">
+      <div>
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft sm:p-8">
           <div>
             <p className="eyebrow">관리자 페이지</p>
