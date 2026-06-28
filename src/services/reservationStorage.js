@@ -6,6 +6,7 @@ const STORAGE_KEY = 'rv-booking-reservations';
 export function loadReservations() {
   // TODO: 현재는 테스트용 localStorage 저장 방식입니다.
   // 실제 서비스 운영 시에는 Supabase, Firebase, Google Sheets, Airtable 또는 자체 DB로 교체해야 합니다.
+  // TODO: MVP 테스트 이후 Supabase reservations 테이블에 저장하도록 createReservation, getReservations, updateReservationStatus 함수를 교체합니다.
   const storedValue = localStorage.getItem(STORAGE_KEY);
 
   if (!storedValue) {
@@ -23,6 +24,7 @@ export function loadReservations() {
 export function saveReservations(reservations) {
   // TODO: 현재는 테스트용 localStorage 저장 방식입니다.
   // 실제 서비스 운영 시에는 Supabase, Firebase, Google Sheets, Airtable 또는 자체 DB로 교체해야 합니다.
+  // TODO: MVP 테스트 이후 Supabase reservations 테이블에 저장하도록 createReservation, getReservations, updateReservationStatus 함수를 교체합니다.
   localStorage.setItem(STORAGE_KEY, JSON.stringify(reservations));
 }
 
