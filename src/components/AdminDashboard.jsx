@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { AlertTriangle, Search, X } from 'lucide-react';
+import { AlertTriangle, Download, RotateCcw, Search, X } from 'lucide-react';
 import {
   getDesiredDate,
   getReceiptNumber,
@@ -33,6 +33,8 @@ const statusStyles = {
 export default function AdminDashboard({
   reservations,
   onReservationUpdate,
+  onReservationsReset,
+  onReservationsExport,
 }) {
   const [selectedReservation, setSelectedReservation] = useState(null);
   const [serviceFilter, setServiceFilter] = useState('전체');
@@ -84,6 +86,20 @@ export default function AdminDashboard({
     );
   };
 
+  const handleResetClick = () => {
+    if (
+      window.confirm(
+        '저장된 상담/예약 데이터를 초기화하시겠습니까? 테스트 데이터가 샘플 상태로 돌아갑니다.',
+      )
+    ) {
+      onReservationsReset?.();
+      setSelectedReservation(null);
+      setServiceFilter('전체');
+      setStatusFilter('전체 상태');
+      setSearchKeyword('');
+    }
+  };
+
   return (
     <section id="admin" className="bg-slate-100 py-16 lg:py-24">
       <div className="section-shell">
@@ -95,6 +111,25 @@ export default function AdminDashboard({
               접수된 검사, 구조변경, 탁송, 정비 상담, 위탁점검 신청 건을
               확인하고 진행 상태를 관리합니다.
             </p>
+          </div>
+
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={onReservationsExport}
+              className="inline-flex items-center gap-2 rounded-md bg-navy-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-navy-800"
+            >
+              <Download size={16} />
+              CSV 다운로드
+            </button>
+            <button
+              type="button"
+              onClick={handleResetClick}
+              className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-600 transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-700"
+            >
+              <RotateCcw size={14} />
+              샘플 데이터로 초기화
+            </button>
           </div>
 
           <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">

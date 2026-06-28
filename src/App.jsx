@@ -12,24 +12,44 @@ import PartnerSection from './components/PartnerSection.jsx';
 import SpecializedSection from './components/SpecializedSection.jsx';
 import CTASection from './components/CTASection.jsx';
 import Footer from './components/Footer.jsx';
-import { sampleBookings } from './data/sampleBookings.js';
+import {
+  exportReservationsToCsv,
+  loadReservations,
+  resetReservations,
+  saveReservations,
+} from './services/reservationStorage.js';
 
 export default function App() {
-  const [reservations, setReservations] = useState(sampleBookings);
+  const [reservations, setReservations] = useState(() => loadReservations());
   const [selectedService, setSelectedService] = useState('');
 
   const handleBookingCreated = (reservation) => {
-    setReservations((current) => [reservation, ...current]);
+    setReservations((current) => {
+      const nextReservations = [reservation, ...current];
+      saveReservations(nextReservations);
+      return nextReservations;
+    });
   };
 
   const handleReservationUpdate = (reservationId, patch) => {
-    setReservations((current) =>
-      current.map((reservation) =>
+    setReservations((current) => {
+      const nextReservations = current.map((reservation) =>
         reservation.id === reservationId
           ? { ...reservation, ...patch }
           : reservation,
-      ),
-    );
+      );
+      saveReservations(nextReservations);
+      return nextReservations;
+    });
+  };
+
+  const handleReservationsReset = () => {
+    const nextReservations = resetReservations();
+    setReservations(nextReservations);
+  };
+
+  const handleReservationsExport = () => {
+    exportReservationsToCsv(reservations);
   };
 
   return (
@@ -47,6 +67,8 @@ export default function App() {
         <AdminDashboard
           reservations={reservations}
           onReservationUpdate={handleReservationUpdate}
+          onReservationsReset={handleReservationsReset}
+          onReservationsExport={handleReservationsExport}
         />
         <BookingLookup reservations={reservations} />
         <CaseStudies />
