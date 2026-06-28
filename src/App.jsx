@@ -12,10 +12,25 @@ import PartnerSection from './components/PartnerSection.jsx';
 import SpecializedSection from './components/SpecializedSection.jsx';
 import CTASection from './components/CTASection.jsx';
 import Footer from './components/Footer.jsx';
+import { sampleBookings } from './data/sampleBookings.js';
 
 export default function App() {
-  const [latestBooking, setLatestBooking] = useState(null);
+  const [reservations, setReservations] = useState(sampleBookings);
   const [selectedService, setSelectedService] = useState('');
+
+  const handleBookingCreated = (reservation) => {
+    setReservations((current) => [reservation, ...current]);
+  };
+
+  const handleReservationStatusChange = (reservationId, nextStatus) => {
+    setReservations((current) =>
+      current.map((reservation) =>
+        reservation.id === reservationId
+          ? { ...reservation, status: nextStatus }
+          : reservation,
+      ),
+    );
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -27,10 +42,13 @@ export default function App() {
         <ProcessSection />
         <BookingForm
           selectedService={selectedService}
-          onBookingCreated={setLatestBooking}
+          onBookingCreated={handleBookingCreated}
         />
-        <AdminDashboard latestBooking={latestBooking} />
-        <BookingLookup latestBooking={latestBooking} />
+        <AdminDashboard
+          reservations={reservations}
+          onStatusChange={handleReservationStatusChange}
+        />
+        <BookingLookup reservations={reservations} />
         <CaseStudies />
         <PartnerSection />
         <SpecializedSection />

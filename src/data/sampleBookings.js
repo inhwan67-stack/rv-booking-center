@@ -1,120 +1,126 @@
+import { getReservationReceiptNumber } from '../types/reservation.js';
+
 export const sampleBookings = [
   {
     id: 'sample-001',
-    receiptNumber: 'RV-001',
-    name: '김민수',
-    phone: '010-1234-1001',
-    region: '경기 화성',
-    vehicleType: '카라반',
-    vehicleModel: 'Adria Altea 552',
-    year: '2026-07-05',
-    service: '카라반 탁송',
-    vehicleStatus: '차량번호: 경기12가3456 / 희망 날짜: 2026-07-05',
-    message:
-      '[문의 내용]\n화성 보관장에서 검사장까지 카라반 이동이 필요합니다.\n\n[탁송 정보]\n출발지: 경기 화성\n도착지: 경기 수원 검사장\n탁송 목적: 검사장 이동',
-    photoUrls: [],
-    processStatus: '견적 안내',
+    receiptNumber: 'RV-202607-001',
     createdAt: '2026-06-28T01:10:00.000Z',
+    customerName: '김민수',
+    phone: '010-1234-1001',
+    vehicleType: '카라반',
+    serviceType: '카라반 탁송',
+    region: '경기 화성',
+    preferredDate: '2026-07-05',
+    vehicleNumber: '경기12가3456',
+    vehicleModel: 'Adria Altea 552',
+    message:
+      '화성 보관장에서 검사장까지 카라반 이동이 필요합니다.\n\n[탁송 정보]\n출발지: 경기 화성\n도착지: 경기 수원 검사장\n탁송 목적: 검사장 이동',
+    hasAttachment: false,
+    attachmentNote: '첨부자료 없음',
+    status: '견적 안내',
+    adminMemo: '탁송 거리와 견인장치 상태 확인 후 견적 안내 필요',
+    departureLocation: '경기 화성',
+    arrivalLocation: '경기 수원 검사장',
+    towingPurpose: '검사장 이동',
+    hasTowVehicle: false,
+    hasTrailerLicense: false,
+    needsTowing: true,
     isSample: true,
   },
   {
     id: 'sample-002',
-    receiptNumber: 'RV-002',
-    name: '박지훈',
-    phone: '010-1234-1002',
-    region: '서울 강서',
-    vehicleType: '캠핑카',
-    vehicleModel: '포터 기반 캠핑카',
-    year: '2026-07-08',
-    service: '검사 예약',
-    vehicleStatus: '차량번호: 서울34나5678 / 희망 날짜: 2026-07-08',
-    message: '[문의 내용]\n정기검사 기간이 도래해 검사 예약 가능 여부를 알고 싶습니다.',
-    photoUrls: [],
-    processStatus: '접수 완료',
+    receiptNumber: 'RV-202607-002',
     createdAt: '2026-06-28T02:20:00.000Z',
+    customerName: '박지훈',
+    phone: '010-1234-1002',
+    vehicleType: '캠핑카',
+    serviceType: '검사 예약',
+    region: '서울 강서',
+    preferredDate: '2026-07-08',
+    vehicleNumber: '서울34나5678',
+    vehicleModel: '포터 기반 캠핑카',
+    message: '정기검사 기간이 도래해 검사 예약 가능 여부를 알고 싶습니다.',
+    hasAttachment: false,
+    attachmentNote: '첨부자료 없음',
+    status: '접수 완료',
+    adminMemo: '신규 접수 건입니다.',
     isSample: true,
   },
   {
     id: 'sample-003',
-    receiptNumber: 'RV-003',
-    name: '이성호',
-    phone: '010-1234-1003',
-    region: '부산',
-    vehicleType: '수입 카라반',
-    vehicleModel: 'Hobby Prestige',
-    year: '2026-07-10',
-    service: '구조변경 상담',
-    vehicleStatus: '차량번호: 부산56다9012 / 희망 날짜: 2026-07-10',
-    message:
-      '[문의 내용]\n수입 카라반 내부 설비 변경 후 구조변경 필요 여부를 확인하고 싶습니다.',
-    photoUrls: [],
-    processStatus: '검토 중',
+    receiptNumber: 'RV-202607-003',
     createdAt: '2026-06-28T03:30:00.000Z',
+    customerName: '이성호',
+    phone: '010-1234-1003',
+    vehicleType: '수입 카라반',
+    serviceType: '구조변경 상담',
+    region: '부산',
+    preferredDate: '2026-07-10',
+    vehicleNumber: '부산56다9012',
+    vehicleModel: 'Hobby Prestige',
+    message: '수입 카라반 내부 설비 변경 후 구조변경 필요 여부를 확인하고 싶습니다.',
+    hasAttachment: false,
+    attachmentNote: '첨부자료 없음',
+    status: '검토 중',
+    adminMemo: '등록증과 변경 전후 사진 요청 예정',
+    hasTowVehicle: true,
+    hasTrailerLicense: true,
+    needsTowing: false,
     isSample: true,
   },
   {
     id: 'sample-004',
-    receiptNumber: 'RV-004',
-    name: '정다은',
-    phone: '010-1234-1004',
-    region: '대전',
-    vehicleType: '캠핑카',
-    vehicleModel: '스타리아 캠퍼',
-    year: '2026-07-12',
-    service: '정비 상담/업체 연결',
-    vehicleStatus: '차량번호: 대전78라3456 / 희망 날짜: 2026-07-12',
-    message:
-      '[문의 내용]\n보조 배터리 충전이 불안정하고 냉장고 전원이 자주 꺼집니다.\n\n[정비 증상]\n배터리, 충전, 냉장고',
-    photoUrls: [],
-    processStatus: '추가자료 요청',
+    receiptNumber: 'RV-202607-004',
     createdAt: '2026-06-28T04:40:00.000Z',
+    customerName: '정다은',
+    phone: '010-1234-1004',
+    vehicleType: '캠핑카',
+    serviceType: '정비 상담/업체 연결',
+    region: '대전',
+    preferredDate: '2026-07-12',
+    vehicleNumber: '대전78라3456',
+    vehicleModel: '스타리아 캠퍼',
+    message: '보조 배터리 충전이 불안정하고 냉장고 전원이 자주 꺼집니다.',
+    hasAttachment: false,
+    attachmentNote: '첨부자료 없음',
+    status: '추가자료 요청',
+    adminMemo: '배터리실 사진과 충전기 모델명 요청',
+    symptoms: ['배터리', '충전', '냉장고'],
     isSample: true,
   },
   {
     id: 'sample-005',
-    receiptNumber: 'RV-005',
-    name: '최영민',
-    phone: '010-1234-1005',
-    region: '인천',
-    vehicleType: '카라반',
-    vehicleModel: 'Swift Sprite',
-    year: '2026-07-15',
-    service: '중고 위탁점검',
-    vehicleStatus: '차량번호: 인천90마7890 / 희망 날짜: 2026-07-15',
-    message:
-      '[문의 내용]\n중고 카라반 구매 전 누수와 하부 상태를 확인하고 싶습니다.\n\n[점검 희망 항목]\n누수, 하부 상태, 전기 시스템, 구조변경 이력',
-    photoUrls: [],
-    processStatus: '예약 확정',
+    receiptNumber: 'RV-202607-005',
     createdAt: '2026-06-28T05:50:00.000Z',
+    customerName: '최영민',
+    phone: '010-1234-1005',
+    vehicleType: '카라반',
+    serviceType: '중고 위탁점검',
+    region: '인천',
+    preferredDate: '2026-07-15',
+    vehicleNumber: '인천90마7890',
+    vehicleModel: 'Swift Sprite',
+    message: '중고 카라반 구매 전 누수와 하부 상태를 확인하고 싶습니다.',
+    hasAttachment: false,
+    attachmentNote: '첨부자료 없음',
+    status: '예약 확정',
+    adminMemo: '판매자 위치 확인 완료, 현장 점검 일정 조율 필요',
+    inspectionItems: ['누수', '하부 상태', '전기 시스템', '구조변경 이력'],
+    hasTowVehicle: false,
+    hasTrailerLicense: false,
+    needsTowing: false,
     isSample: true,
   },
 ];
 
-export function getReceiptNumber(booking, fallbackIndex = 0) {
-  if (booking.receiptNumber) {
-    return booking.receiptNumber;
-  }
-
-  if (booking.id?.startsWith('sample-')) {
-    return booking.id.replace('sample-', 'RV-');
-  }
-
-  return `RV-${String(fallbackIndex + 1).padStart(4, '0')}`;
+export function getReceiptNumber(reservation, fallbackIndex = 0) {
+  return getReservationReceiptNumber(reservation, fallbackIndex);
 }
 
-export function getDesiredDate(booking) {
-  return booking.year || parseVehicleStatus(booking.vehicleStatus, '희망 날짜') || '-';
+export function getDesiredDate(reservation) {
+  return reservation.preferredDate || '-';
 }
 
-export function getVehicleNumber(booking) {
-  return parseVehicleStatus(booking.vehicleStatus, '차량번호') || '-';
-}
-
-function parseVehicleStatus(vehicleStatus, label) {
-  if (!vehicleStatus) {
-    return '';
-  }
-
-  const pattern = new RegExp(`${label}:\\s*([^/\\n]+)`);
-  return vehicleStatus.match(pattern)?.[1]?.trim() || '';
+export function getVehicleNumber(reservation) {
+  return reservation.vehicleNumber || '-';
 }

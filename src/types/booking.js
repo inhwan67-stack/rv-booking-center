@@ -1,58 +1,51 @@
-export const bookingStatuses = [
-  '접수 완료',
-  '검토 중',
-  '추가자료 요청',
-  '견적 안내',
-  '예약 확정',
-  '진행 중',
-  '완료',
-  '취소',
-];
+import {
+  RESERVATION_STATUSES,
+  SERVICE_TYPES,
+  VEHICLE_TYPES,
+  normalizeReservation,
+} from './reservation.js';
 
-export const vehicleTypes = [
-  '캠핑카',
-  '카라반',
-  '트레일러',
-  '수입 카라반',
-  '기타 특수차량',
-];
+export const bookingStatuses = RESERVATION_STATUSES;
+export const serviceOptions = SERVICE_TYPES;
+export const vehicleTypes = VEHICLE_TYPES;
 
-export const serviceOptions = [
-  '검사 예약',
-  '구조변경 상담',
-  '카라반 탁송',
-  '정비 상담/업체 연결',
-  '중고 위탁점검',
-];
+export const mapBookingToSupabaseRow = (booking) => {
+  const reservation = normalizeReservation(booking);
 
-export const mapBookingToSupabaseRow = (booking) => ({
-  id: booking.id,
-  name: booking.name,
-  phone: booking.phone,
-  region: booking.region,
-  vehicle_type: booking.vehicleType,
-  vehicle_model: booking.vehicleModel,
-  vehicle_year: booking.year,
-  service: booking.service,
-  vehicle_status: booking.vehicleStatus,
-  message: booking.message,
-  photo_urls: booking.photoUrls,
-  process_status: booking.processStatus,
-  created_at: booking.createdAt,
-});
+  return {
+    id: reservation.id,
+    name: reservation.customerName,
+    phone: reservation.phone,
+    region: reservation.region,
+    vehicle_type: reservation.vehicleType,
+    vehicle_model: reservation.vehicleModel,
+    vehicle_year: reservation.preferredDate,
+    service: reservation.serviceType,
+    vehicle_status: `차량번호: ${reservation.vehicleNumber} / 희망 날짜: ${reservation.preferredDate}`,
+    message: reservation.message,
+    photo_urls: [],
+    process_status: reservation.status,
+    created_at: reservation.createdAt,
+  };
+};
 
 export const mapSupabaseRowToBooking = (row) => ({
   id: row.id,
-  name: row.name,
-  phone: row.phone,
-  region: row.region,
-  vehicleType: row.vehicle_type,
-  vehicleModel: row.vehicle_model,
-  year: row.vehicle_year,
-  service: row.service,
-  vehicleStatus: row.vehicle_status,
-  message: row.message ?? '',
-  photoUrls: row.photo_urls ?? [],
-  processStatus: row.process_status,
+  receiptNumber: row.receipt_number,
   createdAt: row.created_at,
+  customerName: row.name,
+  phone: row.phone,
+  vehicleType: row.vehicle_type,
+  serviceType: row.service,
+  region: row.region,
+  preferredDate: row.vehicle_year,
+  vehicleNumber: '',
+  vehicleModel: row.vehicle_model,
+  message: row.message ?? '',
+  hasAttachment: Boolean(row.photo_urls?.length),
+  attachmentNote: row.photo_urls?.length
+    ? `${row.photo_urls.length}개 첨부`
+    : '첨부자료 없음',
+  status: row.process_status,
+  adminMemo: row.admin_memo ?? '신규 접수 건입니다.',
 });

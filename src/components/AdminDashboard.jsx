@@ -1,10 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { RefreshCw, X } from 'lucide-react';
-import {
-  fetchBookings,
-  getBookingStorageMode,
-} from '../services/bookingRepository.js';
-import { sampleBookings, getDesiredDate, getReceiptNumber, getVehicleNumber } from '../data/sampleBookings.js';
+import { getDesiredDate, getReceiptNumber, getVehicleNumber } from '../data/sampleBookings.js';
 import { bookingStatuses, serviceOptions } from '../types/booking.js';
 
 const SERVICE_FILTERS = ['전체', ...serviceOptions];
@@ -20,69 +16,25 @@ const statusStyles = {
   취소: 'bg-slate-200 text-slate-600',
 };
 
-export default function AdminDashboard({ latestBooking }) {
-  const [bookings, setBookings] = useState([]);
-  const [selectedBooking, setSelectedBooking] = useState(null);
+export default function AdminDashboard({ reservations, onStatusChange }) {
+  const [selectedReservation, setSelectedReservation] = useState(null);
   const [serviceFilter, setServiceFilter] = useState('전체');
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const storageMode = getBookingStorageMode();
 
-  const loadBookings = async () => {
-    setIsLoading(true);
-    setError('');
-
-    try {
-      const bookingList = await fetchBookings();
-      setBookings(mergeWithSamples(bookingList));
-    } catch (loadError) {
-      console.error('예약 목록 조회 오류:', loadError);
-      setError(
-        loadError.message ||
-          '예약 목록을 불러오는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.',
-      );
-      setBookings(sampleBookings);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadBookings();
-  }, []);
-
-  useEffect(() => {
-    if (!latestBooking) {
-      return;
-    }
-
-    const normalizedBooking = normalizeBooking(latestBooking);
-    setBookings((current) => [
-      normalizedBooking,
-      ...current.filter((booking) => booking.id !== normalizedBooking.id),
-    ]);
-  }, [latestBooking]);
-
-  const filteredBookings = useMemo(() => {
+  const filteredReservations = useMemo(() => {
     if (serviceFilter === '전체') {
-      return bookings;
+      return reservations;
     }
 
-    return bookings.filter((booking) => booking.service === serviceFilter);
-  }, [bookings, serviceFilter]);
-
-  const updateBookingStatus = (bookingId, nextStatus) => {
-    setBookings((current) =>
-      current.map((booking) =>
-        booking.id === bookingId
-          ? { ...booking, processStatus: nextStatus }
-          : booking,
-      ),
+    return reservations.filter(
+      (reservation) => reservation.serviceType === serviceFilter,
     );
-    setSelectedBooking((current) =>
-      current?.id === bookingId
-        ? { ...current, processStatus: nextStatus }
-        : current,
+  }, [reservations, serviceFilter]);
+
+  const updateStatus = (reservationId, nextStatus) => {
+    // TODO: 실제 DB 상태 변경 API 연결 예정
+    onStatusChange?.(reservationId, nextStatus);
+    setSelectedReservation((current) =>
+      current?.id === reservationId ? { ...current, status: nextStatus } : current,
     );
   };
 
@@ -101,11 +53,10 @@ export default function AdminDashboard({ latestBooking }) {
             </div>
             <button
               type="button"
-              onClick={loadBookings}
               className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 px-5 py-3 text-sm font-bold text-navy-900 transition hover:bg-slate-100"
             >
-              <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
-              목록 새로고침
+              <RefreshCw size={16} />
+              메모리 목록
             </button>
           </div>
 
@@ -136,18 +87,10 @@ export default function AdminDashboard({ latestBooking }) {
             </div>
           </div>
 
-          {storageMode === 'local' && (
-            <p className="mt-4 rounded-md bg-orange-50 px-4 py-3 text-sm font-semibold text-orange-700">
-              테스트 모드입니다. 실제 접수 데이터는 브라우저에 임시 저장되며,
-              샘플 접수 5건이 함께 표시됩니다.
-            </p>
-          )}
-
-          {error && (
-            <p className="mt-4 rounded-md bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-              {error}
-            </p>
-          )}
+          <p className="mt-4 rounded-md bg-orange-50 px-4 py-3 text-sm font-semibold text-orange-700">
+            현재는 프론트엔드 메모리 상태로만 관리됩니다. 새로고침하면 샘플
+            데이터로 초기화됩니다.
+          </p>
 
           <div className="mt-6 overflow-x-auto rounded-xl border border-slate-200 bg-white">
             <table className="w-full min-w-[1180px] text-left text-sm">
@@ -166,42 +109,42 @@ export default function AdminDashboard({ latestBooking }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredBookings.length === 0 ? (
+                {filteredReservations.length === 0 ? (
                   <tr>
                     <td className="px-5 py-8 text-center text-slate-500" colSpan="10">
                       선택한 조건에 해당하는 접수 건이 없습니다.
                     </td>
                   </tr>
                 ) : (
-                  filteredBookings.map((booking, index) => (
-                    <tr key={booking.id} className="hover:bg-slate-50">
+                  filteredReservations.map((reservation, index) => (
+                    <tr key={reservation.id} className="hover:bg-slate-50">
                       <td className="px-4 py-4 font-bold text-navy-900">
-                        {getReceiptNumber(booking, index)}
+                        {getReceiptNumber(reservation, index)}
                       </td>
                       <td className="px-4 py-4 text-slate-700">
-                        {formatDate(booking.createdAt)}
+                        {formatDate(reservation.createdAt)}
                       </td>
                       <td className="px-4 py-4 font-bold text-navy-900">
-                        {booking.name}
+                        {reservation.customerName}
                       </td>
-                      <td className="px-4 py-4 text-slate-700">{booking.phone}</td>
+                      <td className="px-4 py-4 text-slate-700">{reservation.phone}</td>
                       <td className="px-4 py-4 text-slate-700">
-                        {booking.vehicleType}
+                        {reservation.vehicleType}
                       </td>
                       <td className="px-4 py-4 font-semibold text-slate-800">
-                        {booking.service}
+                        {reservation.serviceType}
                       </td>
-                      <td className="px-4 py-4 text-slate-700">{booking.region}</td>
+                      <td className="px-4 py-4 text-slate-700">{reservation.region}</td>
                       <td className="px-4 py-4 text-slate-700">
-                        {getDesiredDate(booking)}
+                        {getDesiredDate(reservation)}
                       </td>
                       <td className="px-4 py-4">
-                        <StatusBadge status={booking.processStatus} />
+                        <StatusBadge status={reservation.status} />
                       </td>
                       <td className="px-4 py-4">
                         <button
                           type="button"
-                          onClick={() => setSelectedBooking(booking)}
+                          onClick={() => setSelectedReservation(reservation)}
                           className="rounded-md bg-signal-orange px-4 py-2 text-xs font-bold text-white transition hover:bg-orange-600"
                         >
                           상세보기
@@ -216,18 +159,18 @@ export default function AdminDashboard({ latestBooking }) {
         </div>
       </div>
 
-      {selectedBooking && (
-        <BookingDetailModal
-          booking={selectedBooking}
-          onClose={() => setSelectedBooking(null)}
-          onStatusChange={updateBookingStatus}
+      {selectedReservation && (
+        <ReservationDetailModal
+          reservation={selectedReservation}
+          onClose={() => setSelectedReservation(null)}
+          onStatusChange={updateStatus}
         />
       )}
     </section>
   );
 }
 
-function BookingDetailModal({ booking, onClose, onStatusChange }) {
+function ReservationDetailModal({ reservation, onClose, onStatusChange }) {
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-navy-900/55 p-4">
       <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-white shadow-soft">
@@ -235,7 +178,7 @@ function BookingDetailModal({ booking, onClose, onStatusChange }) {
           <div>
             <p className="text-xs font-bold text-signal-orange">접수 상세</p>
             <h3 className="mt-1 text-xl font-black text-navy-900">
-              {booking.name} 고객 상담 건
+              {reservation.customerName} 고객 상담 건
             </h3>
           </div>
           <button
@@ -249,23 +192,23 @@ function BookingDetailModal({ booking, onClose, onStatusChange }) {
         </div>
 
         <div className="grid gap-5 p-5 md:grid-cols-2">
-          <DetailItem label="고객명" value={booking.name} />
-          <DetailItem label="연락처" value={booking.phone} />
-          <DetailItem label="차량 종류" value={booking.vehicleType} />
-          <DetailItem label="서비스 종류" value={booking.service} />
-          <DetailItem label="지역" value={booking.region} />
-          <DetailItem label="희망 날짜" value={getDesiredDate(booking)} />
-          <DetailItem label="차량번호" value={getVehicleNumber(booking)} />
-          <DetailItem label="차량 모델명" value={booking.vehicleModel || '-'} />
+          <DetailItem label="고객명" value={reservation.customerName} />
+          <DetailItem label="연락처" value={reservation.phone} />
+          <DetailItem label="차량 종류" value={reservation.vehicleType} />
+          <DetailItem label="서비스 종류" value={reservation.serviceType} />
+          <DetailItem label="지역" value={reservation.region} />
+          <DetailItem label="희망 날짜" value={getDesiredDate(reservation)} />
+          <DetailItem label="차량번호" value={getVehicleNumber(reservation)} />
+          <DetailItem label="차량 모델명" value={reservation.vehicleModel || '-'} />
           <DetailItem
             label="첨부 자료 여부"
-            value={booking.photoUrls?.length ? `있음 (${booking.photoUrls.length}개)` : '없음'}
+            value={reservation.hasAttachment ? reservation.attachmentNote : '없음'}
           />
           <label className="block">
             <span className="text-sm font-bold text-navy-900">현재 상태</span>
             <select
-              value={booking.processStatus}
-              onChange={(event) => onStatusChange(booking.id, event.target.value)}
+              value={reservation.status}
+              onChange={(event) => onStatusChange(reservation.id, event.target.value)}
               className="mt-2 w-full rounded-md border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-navy-700 focus:ring-4 focus:ring-navy-100"
             >
               {bookingStatuses.map((status) => (
@@ -278,9 +221,12 @@ function BookingDetailModal({ booking, onClose, onStatusChange }) {
           <div className="md:col-span-2">
             <DetailItem
               label="문의 내용"
-              value={booking.message || '등록된 문의 내용이 없습니다.'}
+              value={reservation.message || '등록된 문의 내용이 없습니다.'}
               multiline
             />
+          </div>
+          <div className="md:col-span-2">
+            <DetailItem label="관리자 메모" value={reservation.adminMemo} multiline />
           </div>
         </div>
 
@@ -323,33 +269,6 @@ function StatusBadge({ status }) {
       {status}
     </span>
   );
-}
-
-function mergeWithSamples(bookings) {
-  const normalizedBookings = bookings.map(normalizeBooking);
-  const existingIds = new Set(normalizedBookings.map((booking) => booking.id));
-  const samplesToAdd = sampleBookings.filter(
-    (booking) => !existingIds.has(booking.id),
-  );
-
-  return [...normalizedBookings, ...samplesToAdd];
-}
-
-function normalizeBooking(booking) {
-  return {
-    ...booking,
-    processStatus: normalizeStatus(booking.processStatus),
-  };
-}
-
-function normalizeStatus(status) {
-  const statusMap = {
-    접수: '접수 완료',
-    상담중: '검토 중',
-    견적중: '견적 안내',
-  };
-
-  return statusMap[status] || status || '접수 완료';
 }
 
 function formatDate(dateValue) {

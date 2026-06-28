@@ -1,10 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { Search } from 'lucide-react';
-import {
-  getDesiredDate,
-  getReceiptNumber,
-  sampleBookings,
-} from '../data/sampleBookings.js';
+import { getDesiredDate, getReceiptNumber } from '../data/sampleBookings.js';
 
 const customerMessages = {
   '접수 완료':
@@ -42,32 +38,28 @@ const statusStyles = {
   취소: 'bg-slate-200 text-slate-600',
 };
 
-export default function BookingLookup({ latestBooking }) {
+export default function BookingLookup({ reservations }) {
   const [receiptNumber, setReceiptNumber] = useState('');
   const [phone, setPhone] = useState('');
   const [lookupResult, setLookupResult] = useState(null);
   const [hasSearched, setHasSearched] = useState(false);
-
-  const searchableBookings = useMemo(() => {
-    const runtimeBookings = latestBooking ? [latestBooking] : [];
-    return [...runtimeBookings, ...sampleBookings];
-  }, [latestBooking]);
 
   const handleSubmit = (event) => {
     event.preventDefault();
     const normalizedReceipt = receiptNumber.trim().toUpperCase();
     const normalizedPhone = phone.trim().replaceAll('-', '');
 
-    const foundBooking = searchableBookings.find((booking, index) => {
-      const bookingReceipt = getReceiptNumber(booking, index).toUpperCase();
-      const bookingPhone = booking.phone.replaceAll('-', '');
+    const foundReservation = reservations.find((reservation, index) => {
+      const reservationReceipt = getReceiptNumber(reservation, index).toUpperCase();
+      const reservationPhone = reservation.phone.replaceAll('-', '');
 
       return (
-        bookingReceipt === normalizedReceipt && bookingPhone === normalizedPhone
+        reservationReceipt === normalizedReceipt &&
+        reservationPhone === normalizedPhone
       );
     });
 
-    setLookupResult(foundBooking ?? null);
+    setLookupResult(foundReservation ?? null);
     setHasSearched(true);
   };
 
@@ -83,7 +75,7 @@ export default function BookingLookup({ latestBooking }) {
               정비 상담, 위탁점검의 진행 상태를 확인할 수 있습니다.
             </p>
             <div className="mt-6 rounded-lg border border-slate-200 bg-slate-50 p-5 text-sm leading-6 text-slate-600">
-              샘플 조회 예시: 접수번호 <strong>RV-001</strong>, 연락처{' '}
+              샘플 조회 예시: 접수번호 <strong>RV-202607-001</strong>, 연락처{' '}
               <strong>010-1234-1001</strong>
             </div>
           </div>
@@ -96,7 +88,7 @@ export default function BookingLookup({ latestBooking }) {
                   value={receiptNumber}
                   onChange={(event) => setReceiptNumber(event.target.value)}
                   className="mt-2 w-full rounded-md border border-slate-300 px-4 py-3 outline-none transition focus:border-navy-700 focus:ring-4 focus:ring-navy-100"
-                  placeholder="예: RV-001"
+                  placeholder="예: RV-202607-001"
                 />
               </label>
               <label className="block">
@@ -124,9 +116,7 @@ export default function BookingLookup({ latestBooking }) {
               </p>
             )}
 
-            {lookupResult && (
-              <LookupResult booking={lookupResult} receiptNumber={receiptNumber} />
-            )}
+            {lookupResult && <LookupResult reservation={lookupResult} />}
           </div>
         </div>
       </div>
@@ -134,9 +124,8 @@ export default function BookingLookup({ latestBooking }) {
   );
 }
 
-function LookupResult({ booking, receiptNumber }) {
-  const status = booking.processStatus || '접수 완료';
-  const receipt = booking.receiptNumber || receiptNumber.trim().toUpperCase();
+function LookupResult({ reservation }) {
+  const status = reservation.status || '접수 완료';
 
   return (
     <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-5">
@@ -144,20 +133,20 @@ function LookupResult({ booking, receiptNumber }) {
         <div>
           <p className="text-xs font-bold text-signal-orange">조회 결과</p>
           <h3 className="mt-1 text-xl font-black text-navy-900">
-            {booking.name} 고객님의 진행 상태
+            {reservation.customerName} 고객님의 진행 상태
           </h3>
         </div>
         <StatusBadge status={status} />
       </div>
 
       <div className="mt-5 grid gap-3 md:grid-cols-2">
-        <InfoItem label="접수번호" value={receipt} />
-        <InfoItem label="접수일" value={formatDate(booking.createdAt)} />
-        <InfoItem label="고객명" value={booking.name} />
-        <InfoItem label="차량 종류" value={booking.vehicleType} />
-        <InfoItem label="서비스 종류" value={booking.service} />
-        <InfoItem label="지역" value={booking.region} />
-        <InfoItem label="희망 날짜" value={getDesiredDate(booking)} />
+        <InfoItem label="접수번호" value={getReceiptNumber(reservation)} />
+        <InfoItem label="접수일" value={formatDate(reservation.createdAt)} />
+        <InfoItem label="고객명" value={reservation.customerName} />
+        <InfoItem label="차량 종류" value={reservation.vehicleType} />
+        <InfoItem label="서비스 종류" value={reservation.serviceType} />
+        <InfoItem label="지역" value={reservation.region} />
+        <InfoItem label="희망 날짜" value={getDesiredDate(reservation)} />
         <InfoItem label="현재 상태" value={status} />
       </div>
 
@@ -168,6 +157,11 @@ function LookupResult({ booking, receiptNumber }) {
         <p className="mt-2 text-sm leading-6 text-slate-700">
           {customerMessages[status] ?? customerMessages['접수 완료']}
         </p>
+        {reservation.adminMemo && (
+          <p className="mt-3 text-sm leading-6 text-slate-600">
+            관리자 메모: {reservation.adminMemo}
+          </p>
+        )}
       </div>
 
       <ProgressSteps status={status} />
