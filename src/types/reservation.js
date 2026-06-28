@@ -131,7 +131,10 @@ export function createReceiptNumber(createdAt = new Date().toISOString()) {
 }
 
 export function getReservationReceiptNumber(reservation, fallbackIndex = 0) {
-  return reservation.receiptNumber || `RV-${String(fallbackIndex + 1).padStart(3, '0')}`;
+  return (
+    reservation.receiptNumber ||
+    `RV-${String(fallbackIndex + 1).padStart(3, '0')}`
+  );
 }
 
 function buildReservationMessage(formData) {

@@ -22,11 +22,11 @@ export default function App() {
     setReservations((current) => [reservation, ...current]);
   };
 
-  const handleReservationStatusChange = (reservationId, nextStatus) => {
+  const handleReservationUpdate = (reservationId, patch) => {
     setReservations((current) =>
       current.map((reservation) =>
         reservation.id === reservationId
-          ? { ...reservation, status: nextStatus }
+          ? { ...reservation, ...patch }
           : reservation,
       ),
     );
@@ -46,7 +46,7 @@ export default function App() {
         />
         <AdminDashboard
           reservations={reservations}
-          onStatusChange={handleReservationStatusChange}
+          onReservationUpdate={handleReservationUpdate}
         />
         <BookingLookup reservations={reservations} />
         <CaseStudies />

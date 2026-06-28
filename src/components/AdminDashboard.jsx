@@ -1,9 +1,23 @@
 import React, { useMemo, useState } from 'react';
-import { RefreshCw, X } from 'lucide-react';
-import { getDesiredDate, getReceiptNumber, getVehicleNumber } from '../data/sampleBookings.js';
+import { AlertTriangle, Search, X } from 'lucide-react';
+import {
+  getDesiredDate,
+  getReceiptNumber,
+  getVehicleNumber,
+} from '../data/sampleBookings.js';
 import { bookingStatuses, serviceOptions } from '../types/booking.js';
 
 const SERVICE_FILTERS = ['전체', ...serviceOptions];
+const STATUS_FILTERS = ['전체 상태', ...bookingStatuses];
+const SUMMARY_STATUSES = [
+  '전체 접수',
+  '접수 완료',
+  '검토 중',
+  '추가자료 요청',
+  '견적 안내',
+  '예약 확정',
+  '완료',
+];
 
 const statusStyles = {
   '접수 완료': 'bg-slate-100 text-slate-700',
@@ -16,25 +30,57 @@ const statusStyles = {
   취소: 'bg-slate-200 text-slate-600',
 };
 
-export default function AdminDashboard({ reservations, onStatusChange }) {
+export default function AdminDashboard({
+  reservations,
+  onReservationUpdate,
+}) {
   const [selectedReservation, setSelectedReservation] = useState(null);
   const [serviceFilter, setServiceFilter] = useState('전체');
+  const [statusFilter, setStatusFilter] = useState('전체 상태');
+  const [searchKeyword, setSearchKeyword] = useState('');
+
+  const summaryItems = useMemo(
+    () =>
+      SUMMARY_STATUSES.map((status) => ({
+        label: status,
+        value:
+          status === '전체 접수'
+            ? reservations.length
+            : reservations.filter((reservation) => reservation.status === status)
+                .length,
+      })),
+    [reservations],
+  );
 
   const filteredReservations = useMemo(() => {
-    if (serviceFilter === '전체') {
-      return reservations;
-    }
+    const keyword = searchKeyword.trim().toLowerCase();
 
-    return reservations.filter(
-      (reservation) => reservation.serviceType === serviceFilter,
-    );
-  }, [reservations, serviceFilter]);
+    return reservations.filter((reservation, index) => {
+      const matchesService =
+        serviceFilter === '전체' || reservation.serviceType === serviceFilter;
+      const matchesStatus =
+        statusFilter === '전체 상태' || reservation.status === statusFilter;
+      const searchableText = [
+        reservation.customerName,
+        reservation.phone,
+        reservation.vehicleNumber,
+        reservation.vehicleModel,
+        reservation.region,
+        getReceiptNumber(reservation, index),
+      ]
+        .join(' ')
+        .toLowerCase();
+      const matchesSearch = !keyword || searchableText.includes(keyword);
 
-  const updateStatus = (reservationId, nextStatus) => {
-    // TODO: 실제 DB 상태 변경 API 연결 예정
-    onStatusChange?.(reservationId, nextStatus);
+      return matchesService && matchesStatus && matchesSearch;
+    });
+  }, [reservations, searchKeyword, serviceFilter, statusFilter]);
+
+  const handleReservationUpdate = (reservationId, patch) => {
+    // TODO: 실제 DB 상태/메모 변경 API 연결 예정
+    onReservationUpdate?.(reservationId, patch);
     setSelectedReservation((current) =>
-      current?.id === reservationId ? { ...current, status: nextStatus } : current,
+      current?.id === reservationId ? { ...current, ...patch } : current,
     );
   };
 
@@ -42,49 +88,59 @@ export default function AdminDashboard({ reservations, onStatusChange }) {
     <section id="admin" className="bg-slate-100 py-16 lg:py-24">
       <div className="section-shell">
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft sm:p-8">
-          <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
-            <div>
-              <p className="eyebrow">관리자 페이지</p>
-              <h2 className="section-title mt-3">상담·예약 접수 관리</h2>
-              <p className="section-copy">
-                접수된 검사, 구조변경, 탁송, 정비 상담, 위탁점검 신청 건을
-                확인하고 진행 상태를 관리합니다.
-              </p>
-            </div>
-            <button
-              type="button"
-              className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 px-5 py-3 text-sm font-bold text-navy-900 transition hover:bg-slate-100"
-            >
-              <RefreshCw size={16} />
-              메모리 목록
-            </button>
+          <div>
+            <p className="eyebrow">관리자 페이지</p>
+            <h2 className="section-title mt-3">상담·예약 접수 관리</h2>
+            <p className="section-copy">
+              접수된 검사, 구조변경, 탁송, 정비 상담, 위탁점검 신청 건을
+              확인하고 진행 상태를 관리합니다.
+            </p>
           </div>
 
-          <div className="mt-8 flex flex-col gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <strong className="text-sm font-black text-navy-900">
-                서비스 필터
-              </strong>
-              <p className="mt-1 text-xs text-slate-500">
-                선택한 서비스 종류의 접수 건만 표시합니다.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {SERVICE_FILTERS.map((filter) => (
-                <button
-                  key={filter}
-                  type="button"
-                  onClick={() => setServiceFilter(filter)}
-                  className={`rounded-full px-4 py-2 text-xs font-bold transition ${
-                    serviceFilter === filter
-                      ? 'bg-navy-900 text-white'
-                      : 'bg-white text-slate-700 hover:bg-navy-50'
-                  }`}
-                >
-                  {filter}
-                </button>
-              ))}
-            </div>
+          <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+            {summaryItems.map((item) => (
+              <div
+                key={item.label}
+                className="rounded-lg border border-slate-200 bg-slate-50 p-4"
+              >
+                <span className="text-xs font-bold text-slate-500">
+                  {item.label}
+                </span>
+                <strong className="mt-2 block text-2xl font-black text-navy-900">
+                  {item.value}
+                </strong>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-6 grid gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4 lg:grid-cols-[1.2fr_0.9fr_0.9fr]">
+            <label className="block">
+              <span className="text-sm font-bold text-navy-900">검색</span>
+              <div className="relative mt-2">
+                <Search
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  size={18}
+                />
+                <input
+                  value={searchKeyword}
+                  onChange={(event) => setSearchKeyword(event.target.value)}
+                  className="w-full rounded-md border border-slate-300 bg-white py-3 pl-10 pr-4 outline-none transition focus:border-navy-700 focus:ring-4 focus:ring-navy-100"
+                  placeholder="고객명, 연락처, 차량번호, 모델명, 지역, 접수번호"
+                />
+              </div>
+            </label>
+            <SelectFilter
+              label="서비스 종류"
+              value={serviceFilter}
+              onChange={setServiceFilter}
+              options={SERVICE_FILTERS}
+            />
+            <SelectFilter
+              label="상태"
+              value={statusFilter}
+              onChange={setStatusFilter}
+              options={STATUS_FILTERS}
+            />
           </div>
 
           <p className="mt-4 rounded-md bg-orange-50 px-4 py-3 text-sm font-semibold text-orange-700">
@@ -93,15 +149,13 @@ export default function AdminDashboard({ reservations, onStatusChange }) {
           </p>
 
           <div className="mt-6 overflow-x-auto rounded-xl border border-slate-200 bg-white">
-            <table className="w-full min-w-[1180px] text-left text-sm">
+            <table className="w-full min-w-[980px] text-left text-sm">
               <thead className="bg-navy-900 text-xs font-bold uppercase tracking-wide text-white">
                 <tr>
                   <th className="px-4 py-4">접수번호</th>
-                  <th className="px-4 py-4">접수일</th>
                   <th className="px-4 py-4">고객명</th>
-                  <th className="px-4 py-4">연락처</th>
-                  <th className="px-4 py-4">차량 종류</th>
                   <th className="px-4 py-4">서비스 종류</th>
+                  <th className="px-4 py-4">차량 종류</th>
                   <th className="px-4 py-4">지역</th>
                   <th className="px-4 py-4">희망 날짜</th>
                   <th className="px-4 py-4">현재 상태</th>
@@ -111,30 +165,40 @@ export default function AdminDashboard({ reservations, onStatusChange }) {
               <tbody className="divide-y divide-slate-100">
                 {filteredReservations.length === 0 ? (
                   <tr>
-                    <td className="px-5 py-8 text-center text-slate-500" colSpan="10">
-                      선택한 조건에 해당하는 접수 건이 없습니다.
+                    <td className="px-5 py-8 text-center text-slate-500" colSpan="8">
+                      검색 또는 필터 조건에 해당하는 접수 건이 없습니다.
                     </td>
                   </tr>
                 ) : (
                   filteredReservations.map((reservation, index) => (
                     <tr key={reservation.id} className="hover:bg-slate-50">
-                      <td className="px-4 py-4 font-bold text-navy-900">
-                        {getReceiptNumber(reservation, index)}
+                      <td className="px-4 py-4">
+                        <div className="flex flex-col gap-2">
+                          <span className="font-bold text-navy-900">
+                            {getReceiptNumber(reservation, index)}
+                          </span>
+                          {isPriorityReservation(reservation) && (
+                            <PriorityBadge />
+                          )}
+                        </div>
                       </td>
-                      <td className="px-4 py-4 text-slate-700">
-                        {formatDate(reservation.createdAt)}
-                      </td>
-                      <td className="px-4 py-4 font-bold text-navy-900">
-                        {reservation.customerName}
-                      </td>
-                      <td className="px-4 py-4 text-slate-700">{reservation.phone}</td>
-                      <td className="px-4 py-4 text-slate-700">
-                        {reservation.vehicleType}
+                      <td className="px-4 py-4">
+                        <strong className="block text-navy-900">
+                          {reservation.customerName}
+                        </strong>
+                        <span className="text-xs text-slate-500">
+                          {reservation.phone}
+                        </span>
                       </td>
                       <td className="px-4 py-4 font-semibold text-slate-800">
                         {reservation.serviceType}
                       </td>
-                      <td className="px-4 py-4 text-slate-700">{reservation.region}</td>
+                      <td className="px-4 py-4 text-slate-700">
+                        {reservation.vehicleType}
+                      </td>
+                      <td className="px-4 py-4 text-slate-700">
+                        {reservation.region}
+                      </td>
                       <td className="px-4 py-4 text-slate-700">
                         {getDesiredDate(reservation)}
                       </td>
@@ -163,17 +227,33 @@ export default function AdminDashboard({ reservations, onStatusChange }) {
         <ReservationDetailModal
           reservation={selectedReservation}
           onClose={() => setSelectedReservation(null)}
-          onStatusChange={updateStatus}
+          onReservationUpdate={handleReservationUpdate}
         />
       )}
     </section>
   );
 }
 
-function ReservationDetailModal({ reservation, onClose, onStatusChange }) {
+function ReservationDetailModal({ reservation, onClose, onReservationUpdate }) {
+  const [memo, setMemo] = useState(reservation.adminMemo || '');
+
+  const handleStatusChange = (nextStatus) => {
+    const statusMemo = `상태가 "${nextStatus}"로 변경되었습니다.`;
+    const nextMemo = memo.trim() ? `${memo}\n${statusMemo}` : statusMemo;
+    setMemo(nextMemo);
+    onReservationUpdate(reservation.id, {
+      status: nextStatus,
+      adminMemo: nextMemo,
+    });
+  };
+
+  const handleMemoBlur = () => {
+    onReservationUpdate(reservation.id, { adminMemo: memo });
+  };
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-navy-900/55 p-4">
-      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-white shadow-soft">
+      <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-xl bg-white shadow-soft">
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
           <div>
             <p className="text-xs font-bold text-signal-orange">접수 상세</p>
@@ -192,6 +272,8 @@ function ReservationDetailModal({ reservation, onClose, onStatusChange }) {
         </div>
 
         <div className="grid gap-5 p-5 md:grid-cols-2">
+          <DetailItem label="접수번호" value={getReceiptNumber(reservation)} />
+          <DetailItem label="접수일" value={formatDate(reservation.createdAt)} />
           <DetailItem label="고객명" value={reservation.customerName} />
           <DetailItem label="연락처" value={reservation.phone} />
           <DetailItem label="차량 종류" value={reservation.vehicleType} />
@@ -201,14 +283,18 @@ function ReservationDetailModal({ reservation, onClose, onStatusChange }) {
           <DetailItem label="차량번호" value={getVehicleNumber(reservation)} />
           <DetailItem label="차량 모델명" value={reservation.vehicleModel || '-'} />
           <DetailItem
-            label="첨부 자료 여부"
-            value={reservation.hasAttachment ? reservation.attachmentNote : '없음'}
+            label="첨부자료 여부"
+            value={reservation.hasAttachment ? '있음' : '없음'}
+          />
+          <DetailItem
+            label="첨부자료 메모"
+            value={reservation.attachmentNote || '-'}
           />
           <label className="block">
             <span className="text-sm font-bold text-navy-900">현재 상태</span>
             <select
               value={reservation.status}
-              onChange={(event) => onStatusChange(reservation.id, event.target.value)}
+              onChange={(event) => handleStatusChange(event.target.value)}
               className="mt-2 w-full rounded-md border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-navy-700 focus:ring-4 focus:ring-navy-100"
             >
               {bookingStatuses.map((status) => (
@@ -225,9 +311,17 @@ function ReservationDetailModal({ reservation, onClose, onStatusChange }) {
               multiline
             />
           </div>
-          <div className="md:col-span-2">
-            <DetailItem label="관리자 메모" value={reservation.adminMemo} multiline />
-          </div>
+          <label className="block md:col-span-2">
+            <span className="text-sm font-bold text-navy-900">담당자 메모</span>
+            <textarea
+              value={memo}
+              onChange={(event) => setMemo(event.target.value)}
+              onBlur={handleMemoBlur}
+              rows="5"
+              className="mt-2 w-full rounded-md border border-slate-300 px-4 py-3 text-sm leading-6 outline-none transition focus:border-navy-700 focus:ring-4 focus:ring-navy-100"
+              placeholder="예: 고객에게 등록증 추가 요청, 탁송 견적 안내 필요, 구조변경 가능 여부 확인 중"
+            />
+          </label>
         </div>
 
         <div className="flex justify-end border-t border-slate-200 px-5 py-4">
@@ -241,6 +335,25 @@ function ReservationDetailModal({ reservation, onClose, onStatusChange }) {
         </div>
       </div>
     </div>
+  );
+}
+
+function SelectFilter({ label, value, onChange, options }) {
+  return (
+    <label className="block">
+      <span className="text-sm font-bold text-navy-900">{label}</span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="mt-2 w-full rounded-md border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-navy-700 focus:ring-4 focus:ring-navy-100"
+      >
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 
@@ -268,6 +381,25 @@ function StatusBadge({ status }) {
     >
       {status}
     </span>
+  );
+}
+
+function PriorityBadge() {
+  return (
+    <span className="inline-flex w-fit items-center gap-1 rounded-full bg-red-50 px-2 py-1 text-[11px] font-black text-red-700">
+      <AlertTriangle size={12} />
+      우선 확인
+    </span>
+  );
+}
+
+function isPriorityReservation(reservation) {
+  const urgentWords = ['급함', '긴급', '오늘', '내일'];
+  const message = reservation.message || '';
+
+  return (
+    reservation.status === '추가자료 요청' ||
+    urgentWords.some((word) => message.includes(word))
   );
 }
 
