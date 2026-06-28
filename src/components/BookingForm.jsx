@@ -24,7 +24,7 @@ const initialFormData = {
   privacy: false,
 };
 
-export default function BookingForm({ onBookingCreated }) {
+export default function BookingForm({ selectedService, onBookingCreated }) {
   const [formData, setFormData] = useState(initialFormData);
   const [photoPreviews, setPhotoPreviews] = useState([]);
   const [error, setError] = useState('');
@@ -35,6 +35,17 @@ export default function BookingForm({ onBookingCreated }) {
   useEffect(() => {
     photoPreviewsRef.current = photoPreviews;
   }, [photoPreviews]);
+
+  useEffect(() => {
+    if (!selectedService) {
+      return;
+    }
+
+    setFormData((current) => ({
+      ...current,
+      service: selectedService,
+    }));
+  }, [selectedService]);
 
   useEffect(() => {
     return () => {

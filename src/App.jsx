@@ -14,6 +14,7 @@ import Footer from './components/Footer.jsx';
 
 export default function App() {
   const [latestBooking, setLatestBooking] = useState(null);
+  const [selectedService, setSelectedService] = useState('');
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -21,9 +22,12 @@ export default function App() {
       <main>
         <Hero />
         <ProblemSection />
-        <ServicesSection />
+        <ServicesSection onServiceSelect={setSelectedService} />
         <ProcessSection />
-        <BookingForm onBookingCreated={setLatestBooking} />
+        <BookingForm
+          selectedService={selectedService}
+          onBookingCreated={setLatestBooking}
+        />
         <AdminDashboard latestBooking={latestBooking} />
         <CaseStudies />
         <PartnerSection />
