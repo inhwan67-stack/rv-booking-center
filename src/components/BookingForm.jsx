@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { ImagePlus, UploadCloud, X } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { CheckCircle2, FileText, ImagePlus, UploadCloud, X } from 'lucide-react';
 import { createBooking } from '../services/bookingRepository.js';
 import { serviceOptions, vehicleTypes } from '../types/booking.js';
 
@@ -39,6 +39,54 @@ const usedInspectionOptions = [
   '기타',
 ];
 
+const recommendedAttachments = [
+  '자동차등록증',
+  '차량 전체 사진',
+  '차대번호 또는 제작명판 사진',
+  '실내 구조 사진',
+  '전기·가스 설비 사진',
+  '튜닝 또는 수리 전후 사진',
+  '도면 또는 제원표',
+  '수리 내역서',
+  '중량 관련 자료',
+];
+
+const serviceAttachmentGuides = {
+  '검사 예약': [
+    '자동차등록증',
+    '차량 전체 사진',
+    '검사 안내 문자 또는 검사 만료일 정보',
+  ],
+  '구조변경 상담': [
+    '자동차등록증',
+    '변경 전 사진',
+    '변경 후 사진',
+    '도면 또는 제원표',
+    '수리/튜닝 내역',
+  ],
+  '카라반 탁송': [
+    '카라반 전체 사진',
+    '견인장치 사진',
+    '연결 커플러 사진',
+    '차대번호 또는 제작명판 사진',
+    '출발지/도착지 위치 정보',
+  ],
+  '정비 상담/업체 연결': [
+    '고장 부위 사진',
+    '증상 영상',
+    '계기판 또는 경고등 사진',
+    '배터리/전기장치 사진',
+    '수리 이력',
+  ],
+  '중고 위탁점검': [
+    '판매 차량 사진',
+    '자동차등록증 또는 차량 정보',
+    '판매글 링크',
+    '점검 희망 부위 사진',
+    '판매자 위치 정보',
+  ],
+};
+
 const initialFormData = {
   name: '',
   phone: '',
@@ -58,6 +106,7 @@ const initialFormData = {
   repairSymptoms: [],
   usedInspectionItems: [],
   photos: [],
+  noAttachments: false,
   privacy: false,
 };
 
@@ -75,6 +124,10 @@ export default function BookingForm({ selectedService, onBookingCreated }) {
   const isDeliveryService = formData.service === '카라반 탁송';
   const isRepairService = formData.service === '정비 상담/업체 연결';
   const isUsedInspectionService = formData.service === '중고 위탁점검';
+  const selectedAttachmentGuide = useMemo(
+    () => serviceAttachmentGuides[formData.service] ?? [],
+    [formData.service],
+  );
 
   useEffect(() => {
     photoPreviewsRef.current = photoPreviews;
@@ -130,13 +183,16 @@ export default function BookingForm({ selectedService, onBookingCreated }) {
     }
 
     const validFiles = selectedFiles.filter((file) => {
-      if (!file.type.startsWith('image/')) {
-        setError('이미지 파일만 업로드할 수 있습니다.');
+      const isSupportedFile =
+        file.type.startsWith('image/') || file.type === 'application/pdf';
+
+      if (!isSupportedFile) {
+        setError('JPG, PNG, PDF 형식의 파일을 첨부해 주세요.');
         return false;
       }
 
       if (file.size > MAX_PHOTO_SIZE) {
-        setError('사진은 1장당 5MB 이하로 업로드해 주세요.');
+        setError('첨부 파일은 1개당 5MB 이하로 업로드해 주세요.');
         return false;
       }
 
@@ -150,13 +206,14 @@ export default function BookingForm({ selectedService, onBookingCreated }) {
       );
 
       if (current.photos.length + validFiles.length > MAX_PHOTO_COUNT) {
-        setError(`사진은 최대 ${MAX_PHOTO_COUNT}장까지 업로드할 수 있습니다.`);
+        setError(`첨부 파일은 최대 ${MAX_PHOTO_COUNT}개까지 선택할 수 있습니다.`);
       } else {
         setError('');
       }
 
       return {
         ...current,
+        noAttachments: false,
         photos: nextPhotos,
       };
     });
@@ -167,6 +224,7 @@ export default function BookingForm({ selectedService, onBookingCreated }) {
         ...validFiles.map((file) => ({
           name: file.name,
           size: file.size,
+          type: file.type,
           url: URL.createObjectURL(file),
         })),
       ];
@@ -289,8 +347,8 @@ export default function BookingForm({ selectedService, onBookingCreated }) {
             </strong>
             <p className="mt-3 text-sm leading-6 text-slate-600">
               자동차등록증, 차량 사진, 도면, 수리 내역, 변경 전후 사진 등을
-              첨부하면 상담이 더 정확해집니다. 사진은 최대 5장까지 업로드할
-              수 있습니다.
+              첨부하면 상담이 더 정확해집니다. 자료가 없다면 담당자 안내 후
+              추가 제출할 수 있습니다.
             </p>
           </div>
         </div>
@@ -301,18 +359,8 @@ export default function BookingForm({ selectedService, onBookingCreated }) {
         >
           <FormGroup title="기본 정보">
             <div className="grid gap-5 md:grid-cols-2">
-              <Field
-                label="이름"
-                name="name"
-                value={formData.name}
-                onChange={updateField}
-              />
-              <Field
-                label="연락처"
-                name="phone"
-                value={formData.phone}
-                onChange={updateField}
-              />
+              <Field label="이름" name="name" value={formData.name} onChange={updateField} />
+              <Field label="연락처" name="phone" value={formData.phone} onChange={updateField} />
               <SelectField
                 label="차량 종류"
                 name="vehicleType"
@@ -327,12 +375,7 @@ export default function BookingForm({ selectedService, onBookingCreated }) {
                 onChange={updateField}
                 options={serviceOptions}
               />
-              <Field
-                label="지역"
-                name="region"
-                value={formData.region}
-                onChange={updateField}
-              />
+              <Field label="지역" name="region" value={formData.region} onChange={updateField} />
               <Field
                 label="희망 날짜"
                 name="desiredDate"
@@ -380,24 +423,49 @@ export default function BookingForm({ selectedService, onBookingCreated }) {
             </label>
           </FormGroup>
 
-          <FormGroup title="첨부 자료">
-            <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6">
+          <FormGroup title="상담에 필요한 서류와 사진을 첨부해주세요">
+            <p className="text-sm leading-6 text-slate-600">
+              자동차등록증, 차량 사진, 도면, 수리 내역, 구조변경 전후 사진
+              등을 첨부하면 담당자가 더 정확하게 검토할 수 있습니다.
+            </p>
+
+            <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_1fr]">
+              <AttachmentGuideCard
+                title="첨부하면 좋은 자료"
+                items={recommendedAttachments}
+              />
+              <AttachmentGuideCard
+                title={
+                  formData.service
+                    ? `${formData.service} 권장 자료`
+                    : '서비스별 권장 자료'
+                }
+                items={
+                  selectedAttachmentGuide.length
+                    ? selectedAttachmentGuide
+                    : ['서비스 종류를 선택하면 권장 첨부자료가 표시됩니다.']
+                }
+                highlighted
+              />
+            </div>
+
+            <div className="mt-5 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6">
               <label className="flex cursor-pointer flex-col items-center text-center">
-                <UploadCloud className="text-navy-700" size={32} />
-                <strong className="mt-3 block text-sm font-bold text-navy-900">
-                  상담 자료 첨부
+                <UploadCloud className="text-navy-700" size={34} />
+                <strong className="mt-3 block text-base font-black text-navy-900">
+                  파일을 드래그하거나 클릭해서 첨부하세요
                 </strong>
                 <span className="mt-2 text-sm leading-6 text-slate-500">
-                  자동차등록증, 차량 사진, 도면, 수리 내역, 변경 전후 사진
-                  등을 첨부하면 상담이 더 정확해집니다.
+                  JPG, PNG, PDF 파일을 권장합니다. 여러 장의 사진을 첨부하면
+                  상담 정확도가 높아집니다.
                 </span>
                 <span className="mt-4 inline-flex items-center gap-2 rounded-md bg-navy-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-navy-800">
                   <ImagePlus size={17} />
-                  사진 선택하기
+                  파일 선택하기
                 </span>
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/*,application/pdf"
                   multiple
                   onChange={updatePhotos}
                   className="sr-only"
@@ -407,36 +475,35 @@ export default function BookingForm({ selectedService, onBookingCreated }) {
               {photoPreviews.length > 0 && (
                 <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {photoPreviews.map((preview, index) => (
-                    <div
+                    <AttachmentPreview
                       key={`${preview.name}-${preview.size}`}
-                      className="relative overflow-hidden rounded-lg border border-slate-200 bg-white"
-                    >
-                      <img
-                        src={preview.url}
-                        alt={`${preview.name} 미리보기`}
-                        className="h-32 w-full object-cover"
-                      />
-                      <div className="p-3">
-                        <p className="truncate text-xs font-bold text-navy-900">
-                          {preview.name}
-                        </p>
-                        <p className="mt-1 text-xs text-slate-500">
-                          {formatFileSize(preview.size)}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removePhoto(index)}
-                        className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-white/95 text-slate-700 shadow-sm transition hover:bg-red-50 hover:text-red-600"
-                        aria-label="사진 삭제"
-                      >
-                        <X size={16} />
-                      </button>
-                    </div>
+                      preview={preview}
+                      onRemove={() => removePhoto(index)}
+                    />
                   ))}
                 </div>
               )}
             </div>
+
+            <label className="mt-4 flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-700">
+              <input
+                type="checkbox"
+                name="noAttachments"
+                checked={formData.noAttachments}
+                onChange={updateField}
+                className="mt-1 h-4 w-4 rounded border-slate-300 text-navy-900"
+              />
+              <span>
+                현재 첨부할 자료가 없습니다. 담당자 안내 후 추가 제출하겠습니다.
+              </span>
+            </label>
+
+            {formData.noAttachments && (
+              <p className="mt-3 rounded-md bg-blue-50 px-4 py-3 text-sm font-semibold leading-6 text-blue-700">
+                첨부자료가 없어도 상담 신청은 가능합니다. 담당자가 확인 후 필요한
+                자료와 제출 방법을 안내드립니다.
+              </p>
+            )}
           </FormGroup>
 
           <label className="mt-6 flex items-start gap-3 rounded-lg bg-slate-50 p-4 text-sm leading-6 text-slate-700">
@@ -620,6 +687,67 @@ function GuideCard({ title, children }) {
     <div className="rounded-lg border border-orange-100 bg-orange-50/70 p-5 text-sm leading-6 text-slate-700">
       <strong className="block text-sm font-black text-navy-900">{title}</strong>
       <div className="mt-2">{children}</div>
+    </div>
+  );
+}
+
+function AttachmentGuideCard({ title, items, highlighted = false }) {
+  return (
+    <div
+      className={`rounded-lg border p-5 ${
+        highlighted
+          ? 'border-orange-100 bg-orange-50/70'
+          : 'border-slate-200 bg-slate-50'
+      }`}
+    >
+      <strong className="text-sm font-black text-navy-900">{title}</strong>
+      <ul className="mt-4 grid gap-2 text-sm leading-6 text-slate-700">
+        {items.map((item) => (
+          <li key={item} className="flex gap-2">
+            <CheckCircle2
+              className="mt-0.5 shrink-0 text-signal-orange"
+              size={16}
+            />
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function AttachmentPreview({ preview, onRemove }) {
+  const isImage = preview.type?.startsWith('image/');
+
+  return (
+    <div className="relative overflow-hidden rounded-lg border border-slate-200 bg-white">
+      {isImage ? (
+        <img
+          src={preview.url}
+          alt={`${preview.name} 미리보기`}
+          className="h-32 w-full object-cover"
+        />
+      ) : (
+        <div className="flex h-32 w-full items-center justify-center bg-navy-50 text-navy-900">
+          <FileText size={34} />
+        </div>
+      )}
+      <div className="p-3">
+        <p className="truncate text-xs font-bold text-navy-900">
+          {preview.name}
+        </p>
+        <p className="mt-1 text-xs text-slate-500">
+          {formatFileSize(preview.size)}
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={onRemove}
+        className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-white/95 text-slate-700 shadow-sm transition hover:bg-red-50 hover:text-red-600"
+        aria-label="첨부 파일 삭제"
+      >
+        <X size={16} />
+      </button>
     </div>
   );
 }

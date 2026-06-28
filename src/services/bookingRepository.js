@@ -229,5 +229,11 @@ function buildBookingMessage(formData) {
     sections.push(`[점검 희망 항목]\n${formData.usedInspectionItems.join(', ')}`);
   }
 
+  if (formData.noAttachments) {
+    sections.push(
+      '[첨부자료]\n현재 첨부할 자료가 없어 담당자 안내 후 추가 제출 예정',
+    );
+  }
+
   return sections.join('\n\n');
 }
