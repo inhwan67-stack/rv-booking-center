@@ -1,5 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { CheckCircle2, FileText, ImagePlus, UploadCloud, X } from 'lucide-react';
+import {
+  ArrowRight,
+  CheckCircle2,
+  ClipboardCheck,
+  FileText,
+  ImagePlus,
+  RotateCcw,
+  UploadCloud,
+  X,
+} from 'lucide-react';
 import { createBooking } from '../services/bookingRepository.js';
 import { serviceOptions, vehicleTypes } from '../types/booking.js';
 
@@ -87,6 +96,26 @@ const serviceAttachmentGuides = {
   ],
 };
 
+const serviceCompletionMessages = {
+  '검사 예약': '검사 가능 여부와 가까운 검사장 일정 확인 후 안내드립니다.',
+  '구조변경 상담':
+    '차량 변경 내용과 등록증, 사진 자료를 검토한 뒤 구조변경 필요 여부를 안내드립니다.',
+  '카라반 탁송':
+    '출발지, 도착지, 카라반 제원, 견인장치 상태를 확인한 뒤 탁송 가능 여부와 견적을 안내드립니다.',
+  '정비 상담/업체 연결':
+    '증상과 지역을 확인한 뒤 연결 가능한 캠핑카·카라반 전문 정비업체를 검토합니다.',
+  '중고 위탁점검':
+    '구매 예정 차량의 위치와 점검 희망 항목을 확인한 뒤 위탁점검 가능 일정을 안내드립니다.',
+};
+
+const nextSteps = [
+  '접수 내용 확인',
+  '차량 정보 및 첨부자료 검토',
+  '추가자료 필요 여부 안내',
+  '예상 비용 및 일정 안내',
+  '예약 확정 후 검사/탁송/점검 진행',
+];
+
 const initialFormData = {
   name: '',
   phone: '',
@@ -112,9 +141,9 @@ const initialFormData = {
 
 export default function BookingForm({ selectedService, onBookingCreated }) {
   const [formData, setFormData] = useState(initialFormData);
+  const [submittedBooking, setSubmittedBooking] = useState(null);
   const [photoPreviews, setPhotoPreviews] = useState([]);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const photoPreviewsRef = useRef([]);
 
@@ -138,6 +167,7 @@ export default function BookingForm({ selectedService, onBookingCreated }) {
       return;
     }
 
+    setSubmittedBooking(null);
     setFormData((current) => ({
       ...current,
       service: selectedService,
@@ -298,7 +328,6 @@ export default function BookingForm({ selectedService, onBookingCreated }) {
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError('');
-    setSuccess('');
 
     const validationMessage = validateForm();
     if (validationMessage) {
@@ -309,13 +338,13 @@ export default function BookingForm({ selectedService, onBookingCreated }) {
     setIsSubmitting(true);
 
     try {
+      const submittedSummary = buildSubmittedSummary(formData);
       const result = await createBooking(formData);
-      console.log('상담 신청 데이터:', result.booking);
-      setSuccess(
-        result.storage === 'local'
-          ? '테스트 상담이 접수되었습니다. 현재는 브라우저 임시 저장 상태입니다.'
-          : '상담 신청이 접수되었습니다. 담당자가 확인 후 연락드리겠습니다.',
-      );
+      setSubmittedBooking({
+        ...submittedSummary,
+        receiptId: result.booking.id,
+        createdAt: result.booking.createdAt,
+      });
       resetForm();
       onBookingCreated?.(result.booking);
     } catch (submitError) {
@@ -327,6 +356,17 @@ export default function BookingForm({ selectedService, onBookingCreated }) {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const startAnotherRequest = () => {
+    setSubmittedBooking(null);
+    setError('');
+    resetForm();
+    document.querySelector('#booking')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const scrollToServices = () => {
+    document.querySelector('#services')?.scrollIntoView({ behavior: 'smooth' });
   };
 
   return (
@@ -353,194 +393,311 @@ export default function BookingForm({ selectedService, onBookingCreated }) {
           </div>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="rounded-xl border border-slate-200 bg-white p-5 shadow-soft sm:p-8"
-        >
-          <FormGroup title="기본 정보">
-            <div className="grid gap-5 md:grid-cols-2">
-              <Field label="이름" name="name" value={formData.name} onChange={updateField} />
-              <Field label="연락처" name="phone" value={formData.phone} onChange={updateField} />
-              <SelectField
-                label="차량 종류"
-                name="vehicleType"
-                value={formData.vehicleType}
-                onChange={updateField}
-                options={vehicleTypes}
-              />
-              <SelectField
-                label="서비스 종류"
-                name="service"
-                value={formData.service}
-                onChange={updateField}
-                options={serviceOptions}
-              />
-              <Field label="지역" name="region" value={formData.region} onChange={updateField} />
-              <Field
-                label="희망 날짜"
-                name="desiredDate"
-                type="date"
-                value={formData.desiredDate}
-                onChange={updateField}
-              />
-              <Field
-                label="차량번호"
-                name="vehicleNumber"
-                value={formData.vehicleNumber}
-                onChange={updateField}
-              />
-              <Field
-                label="차량 모델명"
-                name="vehicleModel"
-                value={formData.vehicleModel}
-                onChange={updateField}
-              />
-            </div>
-          </FormGroup>
-
-          <ConditionalGuides
-            formData={formData}
-            isCaravan={isCaravan}
-            isStructureService={isStructureService}
-            isDeliveryService={isDeliveryService}
-            isRepairService={isRepairService}
-            isUsedInspectionService={isUsedInspectionService}
-            updateField={updateField}
-            updateMultiCheckbox={updateMultiCheckbox}
+        {submittedBooking ? (
+          <SubmissionComplete
+            booking={submittedBooking}
+            onStartAnother={startAnotherRequest}
+            onShowServices={scrollToServices}
           />
+        ) : (
+          <form
+            onSubmit={handleSubmit}
+            className="rounded-xl border border-slate-200 bg-white p-5 shadow-soft sm:p-8"
+          >
+            <FormGroup title="기본 정보">
+              <div className="grid gap-5 md:grid-cols-2">
+                <Field label="이름" name="name" value={formData.name} onChange={updateField} />
+                <Field label="연락처" name="phone" value={formData.phone} onChange={updateField} />
+                <SelectField
+                  label="차량 종류"
+                  name="vehicleType"
+                  value={formData.vehicleType}
+                  onChange={updateField}
+                  options={vehicleTypes}
+                />
+                <SelectField
+                  label="서비스 종류"
+                  name="service"
+                  value={formData.service}
+                  onChange={updateField}
+                  options={serviceOptions}
+                />
+                <Field label="지역" name="region" value={formData.region} onChange={updateField} />
+                <Field
+                  label="희망 날짜"
+                  name="desiredDate"
+                  type="date"
+                  value={formData.desiredDate}
+                  onChange={updateField}
+                />
+                <Field
+                  label="차량번호"
+                  name="vehicleNumber"
+                  value={formData.vehicleNumber}
+                  onChange={updateField}
+                />
+                <Field
+                  label="차량 모델명"
+                  name="vehicleModel"
+                  value={formData.vehicleModel}
+                  onChange={updateField}
+                />
+              </div>
+            </FormGroup>
 
-          <FormGroup title="문의 내용">
-            <label className="block">
-              <span className="text-sm font-bold text-navy-900">문의 내용</span>
-              <textarea
-                name="message"
-                value={formData.message}
-                onChange={updateField}
-                rows="5"
-                className="mt-2 w-full rounded-md border border-slate-300 px-4 py-3 outline-none transition focus:border-navy-700 focus:ring-4 focus:ring-navy-100"
-                placeholder="차량 상태, 검사 일정, 개조 이력, 증상, 탁송 요청 사항 등을 자유롭게 작성해 주세요."
-              />
-            </label>
-          </FormGroup>
+            <ConditionalGuides
+              formData={formData}
+              isCaravan={isCaravan}
+              isStructureService={isStructureService}
+              isDeliveryService={isDeliveryService}
+              isRepairService={isRepairService}
+              isUsedInspectionService={isUsedInspectionService}
+              updateField={updateField}
+              updateMultiCheckbox={updateMultiCheckbox}
+            />
 
-          <FormGroup title="상담에 필요한 서류와 사진을 첨부해주세요">
-            <p className="text-sm leading-6 text-slate-600">
-              자동차등록증, 차량 사진, 도면, 수리 내역, 구조변경 전후 사진
-              등을 첨부하면 담당자가 더 정확하게 검토할 수 있습니다.
-            </p>
-
-            <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_1fr]">
-              <AttachmentGuideCard
-                title="첨부하면 좋은 자료"
-                items={recommendedAttachments}
-              />
-              <AttachmentGuideCard
-                title={
-                  formData.service
-                    ? `${formData.service} 권장 자료`
-                    : '서비스별 권장 자료'
-                }
-                items={
-                  selectedAttachmentGuide.length
-                    ? selectedAttachmentGuide
-                    : ['서비스 종류를 선택하면 권장 첨부자료가 표시됩니다.']
-                }
-                highlighted
-              />
-            </div>
-
-            <div className="mt-5 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6">
-              <label className="flex cursor-pointer flex-col items-center text-center">
-                <UploadCloud className="text-navy-700" size={34} />
-                <strong className="mt-3 block text-base font-black text-navy-900">
-                  파일을 드래그하거나 클릭해서 첨부하세요
-                </strong>
-                <span className="mt-2 text-sm leading-6 text-slate-500">
-                  JPG, PNG, PDF 파일을 권장합니다. 여러 장의 사진을 첨부하면
-                  상담 정확도가 높아집니다.
-                </span>
-                <span className="mt-4 inline-flex items-center gap-2 rounded-md bg-navy-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-navy-800">
-                  <ImagePlus size={17} />
-                  파일 선택하기
-                </span>
-                <input
-                  type="file"
-                  accept="image/*,application/pdf"
-                  multiple
-                  onChange={updatePhotos}
-                  className="sr-only"
+            <FormGroup title="문의 내용">
+              <label className="block">
+                <span className="text-sm font-bold text-navy-900">문의 내용</span>
+                <textarea
+                  name="message"
+                  value={formData.message}
+                  onChange={updateField}
+                  rows="5"
+                  className="mt-2 w-full rounded-md border border-slate-300 px-4 py-3 outline-none transition focus:border-navy-700 focus:ring-4 focus:ring-navy-100"
+                  placeholder="차량 상태, 검사 일정, 개조 이력, 증상, 탁송 요청 사항 등을 자유롭게 작성해 주세요."
                 />
               </label>
+            </FormGroup>
 
-              {photoPreviews.length > 0 && (
-                <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {photoPreviews.map((preview, index) => (
-                    <AttachmentPreview
-                      key={`${preview.name}-${preview.size}`}
-                      preview={preview}
-                      onRemove={() => removePhoto(index)}
-                    />
-                  ))}
-                </div>
+            <FormGroup title="상담에 필요한 서류와 사진을 첨부해주세요">
+              <p className="text-sm leading-6 text-slate-600">
+                자동차등록증, 차량 사진, 도면, 수리 내역, 구조변경 전후 사진
+                등을 첨부하면 담당자가 더 정확하게 검토할 수 있습니다.
+              </p>
+
+              <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_1fr]">
+                <AttachmentGuideCard
+                  title="첨부하면 좋은 자료"
+                  items={recommendedAttachments}
+                />
+                <AttachmentGuideCard
+                  title={
+                    formData.service
+                      ? `${formData.service} 권장 자료`
+                      : '서비스별 권장 자료'
+                  }
+                  items={
+                    selectedAttachmentGuide.length
+                      ? selectedAttachmentGuide
+                      : ['서비스 종류를 선택하면 권장 첨부자료가 표시됩니다.']
+                  }
+                  highlighted
+                />
+              </div>
+
+              <div className="mt-5 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6">
+                <label className="flex cursor-pointer flex-col items-center text-center">
+                  <UploadCloud className="text-navy-700" size={34} />
+                  <strong className="mt-3 block text-base font-black text-navy-900">
+                    파일을 드래그하거나 클릭해서 첨부하세요
+                  </strong>
+                  <span className="mt-2 text-sm leading-6 text-slate-500">
+                    JPG, PNG, PDF 파일을 권장합니다. 여러 장의 사진을 첨부하면
+                    상담 정확도가 높아집니다.
+                  </span>
+                  <span className="mt-4 inline-flex items-center gap-2 rounded-md bg-navy-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-navy-800">
+                    <ImagePlus size={17} />
+                    파일 선택하기
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    multiple
+                    onChange={updatePhotos}
+                    className="sr-only"
+                  />
+                </label>
+
+                {photoPreviews.length > 0 && (
+                  <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {photoPreviews.map((preview, index) => (
+                      <AttachmentPreview
+                        key={`${preview.name}-${preview.size}`}
+                        preview={preview}
+                        onRemove={() => removePhoto(index)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <label className="mt-4 flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-700">
+                <input
+                  type="checkbox"
+                  name="noAttachments"
+                  checked={formData.noAttachments}
+                  onChange={updateField}
+                  className="mt-1 h-4 w-4 rounded border-slate-300 text-navy-900"
+                />
+                <span>
+                  현재 첨부할 자료가 없습니다. 담당자 안내 후 추가 제출하겠습니다.
+                </span>
+              </label>
+
+              {formData.noAttachments && (
+                <p className="mt-3 rounded-md bg-blue-50 px-4 py-3 text-sm font-semibold leading-6 text-blue-700">
+                  첨부자료가 없어도 상담 신청은 가능합니다. 담당자가 확인 후 필요한
+                  자료와 제출 방법을 안내드립니다.
+                </p>
               )}
-            </div>
+            </FormGroup>
 
-            <label className="mt-4 flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-700">
+            <label className="mt-6 flex items-start gap-3 rounded-lg bg-slate-50 p-4 text-sm leading-6 text-slate-700">
               <input
                 type="checkbox"
-                name="noAttachments"
-                checked={formData.noAttachments}
+                name="privacy"
+                checked={formData.privacy}
                 onChange={updateField}
                 className="mt-1 h-4 w-4 rounded border-slate-300 text-navy-900"
               />
               <span>
-                현재 첨부할 자료가 없습니다. 담당자 안내 후 추가 제출하겠습니다.
+                상담 신청을 위한 개인정보 수집 및 이용에 동의합니다. 입력한
+                정보는 상담 목적으로만 사용합니다.
               </span>
             </label>
 
-            {formData.noAttachments && (
-              <p className="mt-3 rounded-md bg-blue-50 px-4 py-3 text-sm font-semibold leading-6 text-blue-700">
-                첨부자료가 없어도 상담 신청은 가능합니다. 담당자가 확인 후 필요한
-                자료와 제출 방법을 안내드립니다.
+            {error && (
+              <p className="mt-5 rounded-md bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                {error}
               </p>
             )}
-          </FormGroup>
 
-          <label className="mt-6 flex items-start gap-3 rounded-lg bg-slate-50 p-4 text-sm leading-6 text-slate-700">
-            <input
-              type="checkbox"
-              name="privacy"
-              checked={formData.privacy}
-              onChange={updateField}
-              className="mt-1 h-4 w-4 rounded border-slate-300 text-navy-900"
-            />
-            <span>
-              상담 신청을 위한 개인정보 수집 및 이용에 동의합니다. 입력한
-              정보는 상담 목적으로만 사용합니다.
-            </span>
-          </label>
-
-          {error && (
-            <p className="mt-5 rounded-md bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-              {error}
-            </p>
-          )}
-          {success && (
-            <p className="mt-5 rounded-md bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700">
-              {success}
-            </p>
-          )}
-
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="mt-6 w-full rounded-md bg-signal-orange px-6 py-4 text-base font-black text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-slate-400"
-          >
-            {isSubmitting ? '상담 신청 중...' : '상담 신청하기'}
-          </button>
-        </form>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="mt-6 w-full rounded-md bg-signal-orange px-6 py-4 text-base font-black text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-slate-400"
+            >
+              {isSubmitting ? '상담 신청 중...' : '상담 신청하기'}
+            </button>
+          </form>
+        )}
       </div>
     </section>
+  );
+}
+
+function SubmissionComplete({ booking, onStartAnother, onShowServices }) {
+  const summaryItems = [
+    ['고객명', booking.name],
+    ['연락처', booking.phone],
+    ['차량 종류', booking.vehicleType],
+    ['서비스 종류', booking.service],
+    ['지역', booking.region],
+    ['희망 날짜', booking.desiredDate],
+    ['차량번호', booking.vehicleNumber],
+    ['차량 모델명', booking.vehicleModel],
+    ['첨부자료 여부', booking.attachmentStatus],
+    ['문의 내용', booking.message || '입력된 문의 내용이 없습니다.'],
+  ];
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-soft sm:p-8">
+      <div className="rounded-xl border border-orange-100 bg-orange-50/70 p-6">
+        <div className="flex items-start gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-signal-orange text-white">
+            <CheckCircle2 size={28} />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-signal-orange">접수 완료</p>
+            <h3 className="mt-2 text-2xl font-black text-navy-900">
+              상담 신청이 접수되었습니다
+            </h3>
+            <div className="mt-4 grid gap-3 text-sm leading-6 text-slate-700">
+              <p>
+                입력해주신 차량 정보와 상담 내용을 확인한 후 담당자가 연락드릴
+                예정입니다.
+              </p>
+              <p>
+                캠핑카·카라반은 차량 상태, 구조변경 가능성, 탁송 필요 여부에
+                따라 진행 방식과 비용이 달라질 수 있습니다.
+              </p>
+              <p>
+                정확한 안내를 위해 담당자가 추가 서류나 사진을 요청할 수
+                있습니다.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-6 rounded-lg border border-navy-100 bg-navy-50 p-5">
+        <div className="flex gap-3">
+          <ClipboardCheck className="mt-1 shrink-0 text-navy-900" size={22} />
+          <div>
+            <strong className="text-sm font-black text-navy-900">
+              {booking.service} 안내
+            </strong>
+            <p className="mt-2 text-sm leading-6 text-slate-700">
+              {serviceCompletionMessages[booking.service]}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-8">
+        <h4 className="text-lg font-black text-navy-900">접수 요약</h4>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          {summaryItems.map(([label, value]) => (
+            <div
+              key={label}
+              className={label === '문의 내용' ? 'md:col-span-2' : undefined}
+            >
+              <span className="text-xs font-black text-slate-500">{label}</span>
+              <p className="mt-1 rounded-md bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-700">
+                {value}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-8">
+        <h4 className="text-lg font-black text-navy-900">다음 진행 단계</h4>
+        <div className="mt-4 grid gap-3">
+          {nextSteps.map((step, index) => (
+            <div
+              key={step}
+              className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-4"
+            >
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-navy-900 text-sm font-black text-white">
+                {index + 1}
+              </span>
+              <span className="text-sm font-bold text-slate-700">{step}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-8 grid gap-3 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={onStartAnother}
+          className="inline-flex items-center justify-center gap-2 rounded-md border border-navy-900 px-5 py-3 text-sm font-bold text-navy-900 transition hover:bg-navy-50"
+        >
+          <RotateCcw size={17} />
+          다른 상담 신청하기
+        </button>
+        <button
+          type="button"
+          onClick={onShowServices}
+          className="inline-flex items-center justify-center gap-2 rounded-md bg-navy-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-navy-800"
+        >
+          메인 서비스 보기
+          <ArrowRight size={17} />
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -823,6 +980,33 @@ function CheckboxGroup({ name, options, selectedOptions, onChange }) {
       ))}
     </div>
   );
+}
+
+function buildSubmittedSummary(formData) {
+  return {
+    name: formData.name,
+    phone: formData.phone,
+    vehicleType: formData.vehicleType,
+    service: formData.service,
+    region: formData.region,
+    desiredDate: formData.desiredDate,
+    vehicleNumber: formData.vehicleNumber,
+    vehicleModel: formData.vehicleModel,
+    message: formData.message,
+    attachmentStatus: getAttachmentStatus(formData),
+  };
+}
+
+function getAttachmentStatus(formData) {
+  if (formData.noAttachments) {
+    return '현재 첨부자료 없음, 담당자 안내 후 추가 제출 예정';
+  }
+
+  if (formData.photos.length > 0) {
+    return `${formData.photos.length}개 첨부`;
+  }
+
+  return '첨부자료 없음';
 }
 
 function formatFileSize(size) {
