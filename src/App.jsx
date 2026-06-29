@@ -21,6 +21,7 @@ import {
 } from './services/reservationStorage.js';
 import {
   fetchReservationsFromSupabase,
+  updateReservationMemo,
   updateReservationStatus,
 } from './services/reservationRepository.js';
 
@@ -59,8 +60,14 @@ export default function App() {
 
   const applyReservationPatch = useCallback((reservationId, patch) => {
     setReservations((current) => {
+      const targetReservation = current.find(
+        (reservation) => reservation.id === reservationId,
+      );
       const nextReservations = current.map((reservation) =>
-        reservation.id === reservationId
+        reservation.id === reservationId ||
+        (!reservation.id &&
+          targetReservation?.receiptNumber &&
+          reservation.receiptNumber === targetReservation.receiptNumber)
           ? { ...reservation, ...patch }
           : reservation,
       );
@@ -72,6 +79,19 @@ export default function App() {
   const handleReservationUpdate = async (reservationId, patch) => {
     if (Object.prototype.hasOwnProperty.call(patch, 'status')) {
       const result = await updateReservationStatus(reservationId, patch.status);
+
+      if (!result.supabaseUpdated) {
+        return { success: false };
+      }
+    }
+
+    if (Object.prototype.hasOwnProperty.call(patch, 'adminMemo')) {
+      const reservation = reservations.find((item) => item.id === reservationId);
+      const result = await updateReservationMemo(
+        reservationId,
+        patch.adminMemo,
+        reservation,
+      );
 
       if (!result.supabaseUpdated) {
         return { success: false };

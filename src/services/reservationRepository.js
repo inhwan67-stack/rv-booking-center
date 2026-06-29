@@ -138,8 +138,25 @@ export async function updateReservationStatus(reservationId, status) {
   };
 }
 
-export async function updateReservationMemo(reservationId, adminMemo) {
-  return updateReservation(reservationId, { adminMemo });
+export async function updateReservationMemo(reservationId, adminMemo, reservation) {
+  const supabaseUpdated = await updateReservationMemoInSupabase(
+    reservation ?? { id: reservationId },
+    adminMemo,
+  );
+
+  if (!supabaseUpdated) {
+    return {
+      reservation: loadReservations().find(
+        (reservation) => reservation.id === reservationId,
+      ),
+      supabaseUpdated: false,
+    };
+  }
+
+  return {
+    reservation: await updateReservation(reservationId, { adminMemo }),
+    supabaseUpdated: true,
+  };
 }
 
 async function insertReservationToSupabase(reservation) {
@@ -193,6 +210,37 @@ async function updateReservationStatusInSupabase(reservationId, status) {
       message: error?.message,
       details: error?.details,
       hint: error?.hint,
+    });
+    return false;
+  }
+}
+
+async function updateReservationMemoInSupabase(reservation, adminMemo) {
+  if (!isSupabaseConfigured || !supabase) {
+    return false;
+  }
+
+  try {
+    const query = supabase
+      .from(RESERVATIONS_TABLE)
+      .update({ admin_memo: adminMemo });
+
+    const { error } = reservation.id
+      ? await query.eq('id', reservation.id)
+      : await query.eq('receipt_number', reservation.receiptNumber);
+
+    if (error) {
+      throw error;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Supabase reservation memo update failed', {
+      code: error?.code,
+      message: error?.message,
+      details: error?.details,
+      hint: error?.hint,
+      status: error?.status,
     });
     return false;
   }

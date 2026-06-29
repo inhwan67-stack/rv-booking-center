@@ -297,30 +297,42 @@ export default function AdminDashboard({
 function ReservationDetailModal({ reservation, onClose, onReservationUpdate }) {
   const [memo, setMemo] = useState(reservation.adminMemo || '');
   const [statusSaveError, setStatusSaveError] = useState('');
+  const [memoSaveMessage, setMemoSaveMessage] = useState('');
+  const [memoSaveError, setMemoSaveError] = useState('');
   const [isSavingStatus, setIsSavingStatus] = useState(false);
+  const [isSavingMemo, setIsSavingMemo] = useState(false);
 
   const handleStatusChange = async (nextStatus) => {
     setStatusSaveError('');
     setIsSavingStatus(true);
-    const statusMemo = `상태가 "${nextStatus}"로 변경되었습니다.`;
-    const nextMemo = memo.trim() ? `${memo}\n${statusMemo}` : statusMemo;
 
     const result = await onReservationUpdate(reservation.id, {
       status: nextStatus,
-      adminMemo: nextMemo,
     });
 
     if (result?.success === false) {
       setStatusSaveError('상태 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.');
-    } else {
-      setMemo(nextMemo);
     }
 
     setIsSavingStatus(false);
   };
 
-  const handleMemoBlur = () => {
-    onReservationUpdate(reservation.id, { adminMemo: memo });
+  const handleMemoSave = async () => {
+    setMemoSaveMessage('');
+    setMemoSaveError('');
+    setIsSavingMemo(true);
+
+    const result = await onReservationUpdate(reservation.id, {
+      adminMemo: memo,
+    });
+
+    if (result?.success === false) {
+      setMemoSaveError('메모 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+    } else {
+      setMemoSaveMessage('관리자 메모가 저장되었습니다.');
+    }
+
+    setIsSavingMemo(false);
   };
 
   return (
@@ -394,11 +406,30 @@ function ReservationDetailModal({ reservation, onClose, onReservationUpdate }) {
             <textarea
               value={memo}
               onChange={(event) => setMemo(event.target.value)}
-              onBlur={handleMemoBlur}
               rows="5"
               className="mt-2 w-full rounded-md border border-slate-300 px-4 py-3 text-sm leading-6 outline-none transition focus:border-navy-700 focus:ring-4 focus:ring-navy-100"
               placeholder="예: 고객에게 등록증 추가 요청, 탁송 견적 안내 필요, 구조변경 가능 여부 확인 중"
             />
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={handleMemoSave}
+                disabled={isSavingMemo}
+                className="rounded-md bg-navy-900 px-4 py-2 text-sm font-bold text-white transition hover:bg-navy-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+              >
+                {isSavingMemo ? '저장 중...' : '메모 저장'}
+              </button>
+              {memoSaveMessage && (
+                <p className="text-sm font-semibold text-emerald-700">
+                  {memoSaveMessage}
+                </p>
+              )}
+              {memoSaveError && (
+                <p className="text-sm font-semibold text-red-700">
+                  {memoSaveError}
+                </p>
+              )}
+            </div>
           </label>
         </div>
 
