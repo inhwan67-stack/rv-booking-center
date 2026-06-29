@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import AdminArea from './components/AdminArea.jsx';
 import Header from './components/Header.jsx';
 import Hero from './components/Hero.jsx';
@@ -19,14 +19,32 @@ import {
   resetReservations,
   saveReservations,
 } from './services/reservationStorage.js';
-import { isSupabaseConfigured } from './services/supabaseClient.js';
+import {
+  fetchReservationsFromSupabase,
+  updateReservationStatus,
+} from './services/reservationRepository.js';
 
 export default function App() {
   const [reservations, setReservations] = useState(() => loadReservations());
   const [selectedService, setSelectedService] = useState('');
-  const [reservationStorageMode, setReservationStorageMode] = useState(
-    isSupabaseConfigured ? 'supabase' : 'temporary',
-  );
+  const [reservationStorageMode, setReservationStorageMode] = useState('temporary');
+  const [isRefreshingReservations, setIsRefreshingReservations] = useState(false);
+
+  const refreshReservationsFromDb = useCallback(async () => {
+    setIsRefreshingReservations(true);
+
+    try {
+      const result = await fetchReservationsFromSupabase();
+      setReservationStorageMode(result.supabaseLoaded ? 'supabase' : 'temporary');
+      setReservations(result.reservations);
+
+      if (result.supabaseLoaded) {
+        saveReservations(result.reservations);
+      }
+    } finally {
+      setIsRefreshingReservations(false);
+    }
+  }, []);
 
   const handleBookingCreated = (reservation, result) => {
     setReservationStorageMode(result?.supabaseSaved ? 'supabase' : 'temporary');
@@ -39,7 +57,7 @@ export default function App() {
     });
   };
 
-  const handleReservationUpdate = (reservationId, patch) => {
+  const applyReservationPatch = useCallback((reservationId, patch) => {
     setReservations((current) => {
       const nextReservations = current.map((reservation) =>
         reservation.id === reservationId
@@ -49,6 +67,19 @@ export default function App() {
       saveReservations(nextReservations);
       return nextReservations;
     });
+  }, []);
+
+  const handleReservationUpdate = async (reservationId, patch) => {
+    if (Object.prototype.hasOwnProperty.call(patch, 'status')) {
+      const result = await updateReservationStatus(reservationId, patch.status);
+
+      if (!result.supabaseUpdated) {
+        return { success: false };
+      }
+    }
+
+    applyReservationPatch(reservationId, patch);
+    return { success: true };
   };
 
   const handleReservationsReset = () => {
@@ -76,6 +107,8 @@ export default function App() {
         <AdminArea
           reservations={reservations}
           reservationStorageMode={reservationStorageMode}
+          isRefreshingReservations={isRefreshingReservations}
+          onReservationsRefresh={refreshReservationsFromDb}
           onReservationUpdate={handleReservationUpdate}
           onReservationsReset={handleReservationsReset}
           onReservationsExport={handleReservationsExport}

@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { AlertTriangle, Download, RotateCcw, Search, X } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, Download, RefreshCw, RotateCcw, Search, X } from 'lucide-react';
 import {
   getDesiredDate,
   getReceiptNumber,
@@ -33,6 +33,8 @@ const statusStyles = {
 export default function AdminDashboard({
   reservations,
   reservationStorageMode,
+  isRefreshingReservations,
+  onReservationsRefresh,
   onReservationUpdate,
   onReservationsReset,
   onReservationsExport,
@@ -41,6 +43,10 @@ export default function AdminDashboard({
   const [serviceFilter, setServiceFilter] = useState('전체');
   const [statusFilter, setStatusFilter] = useState('전체 상태');
   const [searchKeyword, setSearchKeyword] = useState('');
+
+  useEffect(() => {
+    onReservationsRefresh?.();
+  }, [onReservationsRefresh]);
 
   const summaryItems = useMemo(
     () =>
@@ -79,12 +85,17 @@ export default function AdminDashboard({
     });
   }, [reservations, searchKeyword, serviceFilter, statusFilter]);
 
-  const handleReservationUpdate = (reservationId, patch) => {
-    // TODO: 실제 DB 상태/메모 변경 API 연결 예정
-    onReservationUpdate?.(reservationId, patch);
+  const handleReservationUpdate = async (reservationId, patch) => {
+    const result = await onReservationUpdate?.(reservationId, patch);
+
+    if (result?.success === false) {
+      return result;
+    }
+
     setSelectedReservation((current) =>
       current?.id === reservationId ? { ...current, ...patch } : current,
     );
+    return { success: true };
   };
 
   const handleResetClick = () => {
@@ -115,6 +126,18 @@ export default function AdminDashboard({
           </div>
 
           <div className="mt-6 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={onReservationsRefresh}
+              disabled={isRefreshingReservations}
+              className="inline-flex items-center gap-2 rounded-md bg-signal-orange px-4 py-2.5 text-sm font-bold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-slate-400"
+            >
+              <RefreshCw
+                className={isRefreshingReservations ? 'animate-spin' : undefined}
+                size={16}
+              />
+              DB 새로고침
+            </button>
             <button
               type="button"
               onClick={onReservationsExport}
@@ -181,7 +204,7 @@ export default function AdminDashboard({
 
           <p className="mt-4 rounded-md bg-orange-50 px-4 py-3 text-sm font-semibold text-orange-700">
             {reservationStorageMode === 'supabase'
-              ? '상담 신청 데이터는 Supabase DB에 저장됩니다.'
+              ? '현재 상담/예약 데이터는 Supabase DB에서 불러오고 있습니다.'
               : '현재는 프론트엔드 임시 저장 상태입니다.'}
           </p>
 
@@ -273,15 +296,27 @@ export default function AdminDashboard({
 
 function ReservationDetailModal({ reservation, onClose, onReservationUpdate }) {
   const [memo, setMemo] = useState(reservation.adminMemo || '');
+  const [statusSaveError, setStatusSaveError] = useState('');
+  const [isSavingStatus, setIsSavingStatus] = useState(false);
 
-  const handleStatusChange = (nextStatus) => {
+  const handleStatusChange = async (nextStatus) => {
+    setStatusSaveError('');
+    setIsSavingStatus(true);
     const statusMemo = `상태가 "${nextStatus}"로 변경되었습니다.`;
     const nextMemo = memo.trim() ? `${memo}\n${statusMemo}` : statusMemo;
-    setMemo(nextMemo);
-    onReservationUpdate(reservation.id, {
+
+    const result = await onReservationUpdate(reservation.id, {
       status: nextStatus,
       adminMemo: nextMemo,
     });
+
+    if (result?.success === false) {
+      setStatusSaveError('상태 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+    } else {
+      setMemo(nextMemo);
+    }
+
+    setIsSavingStatus(false);
   };
 
   const handleMemoBlur = () => {
@@ -332,6 +367,7 @@ function ReservationDetailModal({ reservation, onClose, onReservationUpdate }) {
             <select
               value={reservation.status}
               onChange={(event) => handleStatusChange(event.target.value)}
+              disabled={isSavingStatus}
               className="mt-2 w-full rounded-md border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-navy-700 focus:ring-4 focus:ring-navy-100"
             >
               {bookingStatuses.map((status) => (
@@ -340,6 +376,11 @@ function ReservationDetailModal({ reservation, onClose, onReservationUpdate }) {
                 </option>
               ))}
             </select>
+            {statusSaveError && (
+              <p className="mt-2 rounded-md bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+                {statusSaveError}
+              </p>
+            )}
           </label>
           <div className="md:col-span-2">
             <DetailItem

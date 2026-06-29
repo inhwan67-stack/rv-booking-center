@@ -5,6 +5,8 @@ import AdminDashboard from './AdminDashboard.jsx';
 export default function AdminArea({
   reservations,
   reservationStorageMode,
+  isRefreshingReservations,
+  onReservationsRefresh,
   onReservationUpdate,
   onReservationsReset,
   onReservationsExport,
@@ -52,6 +54,8 @@ export default function AdminArea({
             <AdminDashboard
               reservations={reservations}
               reservationStorageMode={reservationStorageMode}
+              isRefreshingReservations={isRefreshingReservations}
+              onReservationsRefresh={onReservationsRefresh}
               onReservationUpdate={onReservationUpdate}
               onReservationsReset={onReservationsReset}
               onReservationsExport={onReservationsExport}

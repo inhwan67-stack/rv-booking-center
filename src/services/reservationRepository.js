@@ -79,8 +79,63 @@ export async function getReservations() {
   return loadReservations();
 }
 
+export async function fetchReservationsFromSupabase() {
+  if (!isSupabaseConfigured || !supabase) {
+    return {
+      reservations: loadReservations(),
+      supabaseLoaded: false,
+    };
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from(RESERVATIONS_TABLE)
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    const reservations = (data ?? []).map(mapSupabaseRowToReservation);
+    return {
+      reservations,
+      supabaseLoaded: true,
+    };
+  } catch (error) {
+    console.error('Supabase reservations select failed', {
+      code: error?.code,
+      message: error?.message,
+      details: error?.details,
+      hint: error?.hint,
+    });
+
+    return {
+      reservations: loadReservations(),
+      supabaseLoaded: false,
+    };
+  }
+}
+
 export async function updateReservationStatus(reservationId, status) {
-  return updateReservation(reservationId, { status });
+  const supabaseUpdated = await updateReservationStatusInSupabase(
+    reservationId,
+    status,
+  );
+
+  if (!supabaseUpdated) {
+    return {
+      reservation: loadReservations().find(
+        (reservation) => reservation.id === reservationId,
+      ),
+      supabaseUpdated: false,
+    };
+  }
+
+  return {
+    reservation: await updateReservation(reservationId, { status }),
+    supabaseUpdated: true,
+  };
 }
 
 export async function updateReservationMemo(reservationId, adminMemo) {
@@ -107,6 +162,33 @@ async function insertReservationToSupabase(reservation) {
   } catch (error) {
     console.error('Supabase reservation insert failed', {
       status: error?.status,
+      code: error?.code,
+      message: error?.message,
+      details: error?.details,
+      hint: error?.hint,
+    });
+    return false;
+  }
+}
+
+async function updateReservationStatusInSupabase(reservationId, status) {
+  if (!isSupabaseConfigured || !supabase) {
+    return false;
+  }
+
+  try {
+    const { error } = await supabase
+      .from(RESERVATIONS_TABLE)
+      .update({ status })
+      .eq('id', reservationId);
+
+    if (error) {
+      throw error;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Supabase reservation status update failed', {
       code: error?.code,
       message: error?.message,
       details: error?.details,
