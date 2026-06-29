@@ -1,5 +1,6 @@
 import { createReservationFromForm } from '../types/reservation.js';
 import { createReservation } from './reservationRepository.js';
+import { isSupabaseConfigured } from './supabaseClient.js';
 
 export async function createBooking(formData) {
   const reservation = createReservationFromForm(formData);
@@ -17,5 +18,5 @@ export async function fetchBookings() {
 }
 
 export function getBookingStorageMode() {
-  return 'localStorage';
+  return isSupabaseConfigured ? 'supabase-localStorage' : 'localStorage';
 }

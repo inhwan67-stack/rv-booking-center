@@ -348,7 +348,7 @@ export default function BookingForm({ selectedService, onBookingCreated }) {
         supabaseSaved: result.supabaseSaved,
       });
       resetForm();
-      onBookingCreated?.(result.booking);
+      onBookingCreated?.(result.booking, result);
     } catch (submitError) {
       console.error('상담 신청 저장 오류:', submitError);
       setError(

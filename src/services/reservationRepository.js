@@ -102,12 +102,16 @@ async function insertReservationToSupabase(reservation) {
       throw error;
     }
 
-    console.info('Supabase reservation insert succeeded:', {
-      receiptNumber: reservation.receiptNumber,
-    });
+    console.log('Supabase reservation insert success');
     return true;
   } catch (error) {
-    console.error('Supabase reservation insert failed:', error);
+    console.error('Supabase reservation insert failed', {
+      status: error?.status,
+      code: error?.code,
+      message: error?.message,
+      details: error?.details,
+      hint: error?.hint,
+    });
     return false;
   }
 }

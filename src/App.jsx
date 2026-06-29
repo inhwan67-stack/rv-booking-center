@@ -19,12 +19,17 @@ import {
   resetReservations,
   saveReservations,
 } from './services/reservationStorage.js';
+import { isSupabaseConfigured } from './services/supabaseClient.js';
 
 export default function App() {
   const [reservations, setReservations] = useState(() => loadReservations());
   const [selectedService, setSelectedService] = useState('');
+  const [reservationStorageMode, setReservationStorageMode] = useState(
+    isSupabaseConfigured ? 'supabase' : 'temporary',
+  );
 
-  const handleBookingCreated = (reservation) => {
+  const handleBookingCreated = (reservation, result) => {
+    setReservationStorageMode(result?.supabaseSaved ? 'supabase' : 'temporary');
     setReservations((current) => {
       const nextReservations = current.some((item) => item.id === reservation.id)
         ? current
@@ -70,6 +75,7 @@ export default function App() {
         <BookingLookup reservations={reservations} />
         <AdminArea
           reservations={reservations}
+          reservationStorageMode={reservationStorageMode}
           onReservationUpdate={handleReservationUpdate}
           onReservationsReset={handleReservationsReset}
           onReservationsExport={handleReservationsExport}

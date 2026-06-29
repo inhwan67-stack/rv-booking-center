@@ -32,6 +32,7 @@ const statusStyles = {
 
 export default function AdminDashboard({
   reservations,
+  reservationStorageMode,
   onReservationUpdate,
   onReservationsReset,
   onReservationsExport,
@@ -179,8 +180,9 @@ export default function AdminDashboard({
           </div>
 
           <p className="mt-4 rounded-md bg-orange-50 px-4 py-3 text-sm font-semibold text-orange-700">
-            현재는 프론트엔드 메모리 상태로만 관리됩니다. 새로고침하면 샘플
-            데이터로 초기화됩니다.
+            {reservationStorageMode === 'supabase'
+              ? '상담 신청 데이터는 Supabase DB에 저장됩니다.'
+              : '현재는 프론트엔드 임시 저장 상태입니다.'}
           </p>
 
           <div className="mt-6 overflow-x-auto rounded-xl border border-slate-200 bg-white">

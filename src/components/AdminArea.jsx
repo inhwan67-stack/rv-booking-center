@@ -4,6 +4,7 @@ import AdminDashboard from './AdminDashboard.jsx';
 
 export default function AdminArea({
   reservations,
+  reservationStorageMode,
   onReservationUpdate,
   onReservationsReset,
   onReservationsExport,
@@ -50,6 +51,7 @@ export default function AdminArea({
           <div id="admin-dashboard-panel" className="mt-6">
             <AdminDashboard
               reservations={reservations}
+              reservationStorageMode={reservationStorageMode}
               onReservationUpdate={onReservationUpdate}
               onReservationsReset={onReservationsReset}
               onReservationsExport={onReservationsExport}
