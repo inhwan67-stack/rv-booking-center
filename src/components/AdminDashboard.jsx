@@ -466,6 +466,15 @@ function ReservationDetailModal({ reservation, onClose, onReservationUpdate }) {
             label="첨부자료 메모"
             value={reservation.attachmentNote || '-'}
           />
+          <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <h4 className="text-sm font-black text-navy-900">첨부파일</h4>
+            <DetailItem
+              label="첨부파일 메모"
+              value={reservation.attachmentMemo || '-'}
+              multiline
+            />
+            <AdminAttachmentList attachments={reservation.attachmentUrls ?? []} />
+          </div>
           <label className="block">
             <span className="text-sm font-bold text-navy-900">현재 상태</span>
             <select
@@ -672,6 +681,44 @@ function DetailItem({ label, value, multiline = false }) {
         {value || '-'}
       </p>
     </div>
+  );
+}
+
+function AdminAttachmentList({ attachments }) {
+  if (!attachments.length) {
+    return (
+      <p className="mt-3 rounded-md bg-white px-4 py-3 text-sm text-slate-500">
+        업로드된 첨부파일이 없습니다.
+      </p>
+    );
+  }
+
+  return (
+    <ul className="mt-3 grid gap-2">
+      {attachments.map((attachment, index) => (
+        <li
+          key={`${attachment.url}-${index}`}
+          className="rounded-md border border-slate-200 bg-white p-3 text-sm"
+        >
+          <div className="font-bold text-navy-900">
+            {attachment.name || '첨부파일'}
+          </div>
+          <div className="mt-1 text-slate-500">
+            업로드일: {formatDate(attachment.uploadedAt)}
+          </div>
+          {attachment.url && (
+            <a
+              href={attachment.url}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-2 inline-flex text-sm font-bold text-signal-orange hover:text-orange-700"
+            >
+              파일 열기
+            </a>
+          )}
+        </li>
+      ))}
+    </ul>
   );
 }
 

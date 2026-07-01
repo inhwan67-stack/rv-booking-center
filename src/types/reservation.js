@@ -41,6 +41,8 @@ export const VEHICLE_TYPES = [
  * @property {string} message
  * @property {boolean} hasAttachment
  * @property {string} attachmentNote
+ * @property {Array=} attachmentUrls
+ * @property {string=} attachmentMemo
  * @property {string} status
  * @property {string} adminMemo
  * @property {number=} baseAmount
@@ -78,6 +80,8 @@ export function createReservationFromForm(formData) {
     message: buildReservationMessage(formData),
     hasAttachment,
     attachmentNote: buildAttachmentNote(formData, hasAttachment),
+    attachmentUrls: [],
+    attachmentMemo: '',
     status: '접수 완료',
     adminMemo: '신규 접수 건입니다.',
     baseAmount: 0,
@@ -119,6 +123,8 @@ export function normalizeReservation(reservation) {
     attachmentNote: reservation.photoUrls?.length
       ? `${reservation.photoUrls.length}개 첨부`
       : '첨부자료 없음',
+    attachmentUrls: reservation.attachmentUrls ?? [],
+    attachmentMemo: reservation.attachmentMemo ?? '',
     status: normalizeStatus(reservation.processStatus),
     adminMemo: reservation.adminMemo ?? '신규 접수 건입니다.',
     baseAmount: reservation.baseAmount ?? 0,

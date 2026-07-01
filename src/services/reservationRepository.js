@@ -5,6 +5,7 @@ import {
 } from './reservationStorage.js';
 
 const RESERVATIONS_TABLE = 'reservations';
+const RESERVATION_FILES_BUCKET = 'reservation-files';
 
 export function mapReservationToSupabaseRow(reservation) {
   return {
@@ -22,6 +23,8 @@ export function mapReservationToSupabaseRow(reservation) {
     message: reservation.message,
     has_attachment: reservation.hasAttachment,
     attachment_note: reservation.attachmentNote,
+    attachment_urls: reservation.attachmentUrls,
+    attachment_memo: reservation.attachmentMemo,
     status: reservation.status,
     admin_memo: reservation.adminMemo,
     base_amount: reservation.baseAmount,
@@ -57,6 +60,8 @@ export function mapSupabaseRowToReservation(row) {
     message: row.message,
     hasAttachment: row.has_attachment,
     attachmentNote: row.attachment_note,
+    attachmentUrls: Array.isArray(row.attachment_urls) ? row.attachment_urls : [],
+    attachmentMemo: row.attachment_memo ?? '',
     status: row.status,
     adminMemo: row.admin_memo,
     customerNotice: row.customer_notice ?? row.admin_memo ?? '',
@@ -200,6 +205,77 @@ export async function lookupCustomerReservations({
   }
 
   return (data ?? []).map(mapSupabaseRowToReservation);
+}
+
+export async function uploadReservationAttachment(reservation, file) {
+  if (!isSupabaseConfigured || !supabase) {
+    throw new Error('Supabase is not configured.');
+  }
+
+  const receiptNumber = reservation.receiptNumber;
+  const timestamp = Date.now();
+  const safeFileName = createSafeStorageFileName(file.name);
+  const filePath = `${receiptNumber}/${timestamp}_${safeFileName}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from(RESERVATION_FILES_BUCKET)
+    .upload(filePath, file, {
+      contentType: file.type,
+      upsert: false,
+    });
+
+  if (uploadError) {
+    console.error('Supabase reservation attachment storage upload failed', {
+      code: uploadError?.code,
+      message: uploadError?.message,
+      details: uploadError?.details,
+      hint: uploadError?.hint,
+      status: uploadError?.status,
+    });
+    throw uploadError;
+  }
+
+  const { data: publicUrlData } = supabase.storage
+    .from(RESERVATION_FILES_BUCKET)
+    .getPublicUrl(filePath);
+
+  const attachment = {
+    name: file.name,
+    url: publicUrlData.publicUrl,
+    type: file.type,
+    uploadedAt: new Date().toISOString(),
+  };
+  let updatedReservation;
+
+  try {
+    const currentAttachments = await fetchReservationAttachmentUrls(reservation);
+    const attachmentUrls = [...currentAttachments, attachment];
+    updatedReservation = await updateReservationAttachments(reservation, {
+      attachmentUrls,
+    });
+  } catch (error) {
+    console.error('Supabase reservation attachment database update failed', {
+      code: error?.code,
+      message: error?.message,
+      details: error?.details,
+      hint: error?.hint,
+      status: error?.status,
+    });
+    throw error;
+  }
+
+  return {
+    attachment,
+    reservation: updatedReservation,
+  };
+}
+
+export async function updateReservationAttachmentMemo(reservation, attachmentMemo) {
+  if (!isSupabaseConfigured || !supabase) {
+    throw new Error('Supabase is not configured.');
+  }
+
+  return updateReservationAttachments(reservation, { attachmentMemo });
 }
 
 export async function updateReservationMemo(reservationId, adminMemo, reservation) {
@@ -368,6 +444,50 @@ async function updateReservationPriceInSupabase(reservation, priceInfo) {
   }
 }
 
+async function fetchReservationAttachmentUrls(reservation) {
+  const query = supabase
+    .from(RESERVATIONS_TABLE)
+    .select('attachment_urls');
+
+  const { data, error } = reservation?.id
+    ? await query.eq('id', reservation.id).maybeSingle()
+    : await query.eq('receipt_number', reservation.receiptNumber).maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return Array.isArray(data?.attachment_urls) ? data.attachment_urls : [];
+}
+
+async function updateReservationAttachments(reservation, patch) {
+  const updatePayload = {};
+
+  if (Object.prototype.hasOwnProperty.call(patch, 'attachmentUrls')) {
+    updatePayload.attachment_urls = patch.attachmentUrls;
+    updatePayload.has_attachment = patch.attachmentUrls.length > 0;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, 'attachmentMemo')) {
+    updatePayload.attachment_memo = patch.attachmentMemo;
+  }
+
+  const query = supabase
+    .from(RESERVATIONS_TABLE)
+    .update(updatePayload)
+    .select('*');
+
+  const { data, error } = reservation?.id
+    ? await query.eq('id', reservation.id).single()
+    : await query.eq('receipt_number', reservation.receiptNumber).single();
+
+  if (error) {
+    throw error;
+  }
+
+  return mapSupabaseRowToReservation(data);
+}
+
 function saveReservationToLocalStorage(reservation) {
   const reservations = loadReservations();
   const nextReservations = reservations.some((item) => item.id === reservation.id)
@@ -397,6 +517,15 @@ function createPhoneCandidates(phone) {
   }
 
   return Array.from(candidates).filter(Boolean);
+}
+
+function createSafeStorageFileName(fileName) {
+  const safeFileName = String(fileName ?? 'attachment')
+    .replace(/[^A-Za-z0-9._-]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+  return safeFileName || 'attachment';
 }
 
 async function updateReservation(reservationId, patch) {

@@ -1,9 +1,20 @@
 import React, { useState } from 'react';
 import { Search } from 'lucide-react';
 import { getDesiredDate, getReceiptNumber } from '../data/sampleBookings.js';
-import { lookupCustomerReservations } from '../services/reservationRepository.js';
+import {
+  lookupCustomerReservations,
+  updateReservationAttachmentMemo,
+  uploadReservationAttachment,
+} from '../services/reservationRepository.js';
 
 const DEFAULT_STATUS = '접수 완료';
+const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024;
+const ALLOWED_ATTACHMENT_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'application/pdf',
+];
 
 const customerMessages = {
   '접수 완료':
@@ -88,6 +99,17 @@ export default function BookingLookup() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleReservationChange = (nextReservation) => {
+    setLookupResults((current) =>
+      current.map((reservation) =>
+        (reservation.id && reservation.id === nextReservation.id) ||
+        reservation.receiptNumber === nextReservation.receiptNumber
+          ? nextReservation
+          : reservation,
+      ),
+    );
   };
 
   return (
@@ -184,6 +206,7 @@ export default function BookingLookup() {
                     key={reservation.id ?? reservation.receiptNumber}
                     reservation={reservation}
                     fallbackIndex={index}
+                    onReservationChange={handleReservationChange}
                   />
                 ))}
               </div>
@@ -195,7 +218,7 @@ export default function BookingLookup() {
   );
 }
 
-function LookupResult({ reservation, fallbackIndex }) {
+function LookupResult({ reservation, fallbackIndex, onReservationChange }) {
   const status = reservation.status || DEFAULT_STATUS;
   // TODO: customer_notice 컬럼이 분리되면 customerNotice를 우선 사용하고 adminMemo fallback을 제거합니다.
   const customerNotice = reservation.customerNotice || reservation.adminMemo || '';
@@ -245,7 +268,206 @@ function LookupResult({ reservation, fallbackIndex }) {
         </p>
       </div>
 
+      <AttachmentUploadPanel
+        reservation={reservation}
+        onReservationChange={onReservationChange}
+      />
+
       <ProgressSteps status={status} />
+    </div>
+  );
+}
+
+function AttachmentUploadPanel({ reservation, onReservationChange }) {
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [attachmentMemo, setAttachmentMemo] = useState(
+    reservation.attachmentMemo || '',
+  );
+  const [message, setMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  const [isSavingMemo, setIsSavingMemo] = useState(false);
+  const attachments = Array.isArray(reservation.attachmentUrls)
+    ? reservation.attachmentUrls
+    : [];
+
+  const handleFileChange = (event) => {
+    const file = event.target.files?.[0] ?? null;
+    setMessage('');
+    setErrorMessage('');
+
+    if (!file) {
+      setSelectedFile(null);
+      return;
+    }
+
+    if (!ALLOWED_ATTACHMENT_TYPES.includes(file.type)) {
+      setSelectedFile(null);
+      setErrorMessage('허용되지 않는 파일 형식입니다.');
+      return;
+    }
+
+    if (file.size > MAX_ATTACHMENT_SIZE) {
+      setSelectedFile(null);
+      setErrorMessage('파일은 1개당 최대 10MB까지 업로드할 수 있습니다.');
+      return;
+    }
+
+    setSelectedFile(file);
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFile) {
+      return;
+    }
+
+    setIsUploading(true);
+    setMessage('');
+    setErrorMessage('');
+
+    try {
+      const result = await uploadReservationAttachment(reservation, selectedFile);
+      setSelectedFile(null);
+      setMessage('첨부파일이 업로드되었습니다.');
+      onReservationChange?.(result.reservation);
+    } catch (error) {
+      console.error('Reservation attachment upload failed', {
+        code: error?.code,
+        message: error?.message,
+        details: error?.details,
+        hint: error?.hint,
+        status: error?.status,
+      });
+      setErrorMessage('첨부파일 업로드에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleMemoSave = async () => {
+    setIsSavingMemo(true);
+    setMessage('');
+    setErrorMessage('');
+
+    try {
+      const nextReservation = await updateReservationAttachmentMemo(
+        reservation,
+        attachmentMemo,
+      );
+      setMessage('첨부 메모가 저장되었습니다.');
+      onReservationChange?.(nextReservation);
+    } catch (error) {
+      console.error('Reservation attachment memo update failed', {
+        code: error?.code,
+        message: error?.message,
+        details: error?.details,
+        hint: error?.hint,
+        status: error?.status,
+      });
+      setErrorMessage('첨부 메모 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+    } finally {
+      setIsSavingMemo(false);
+    }
+  };
+
+  return (
+    <div className="mt-5 rounded-lg border border-slate-200 bg-white p-4">
+      <h4 className="text-sm font-black text-navy-900">첨부파일 업로드</h4>
+      <p className="mt-2 text-sm leading-6 text-slate-600">
+        차량등록증, 차대번호 사진, 실내/외부 사진, 도면 자료 등을 업로드해 주세요.
+      </p>
+
+      <div className="mt-4 grid gap-3">
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/webp,application/pdf"
+          onChange={handleFileChange}
+          className="block w-full text-sm text-slate-700 file:mr-4 file:rounded-md file:border-0 file:bg-navy-900 file:px-4 file:py-2 file:text-sm file:font-bold file:text-white hover:file:bg-navy-800"
+        />
+        {selectedFile && (
+          <p className="text-sm font-semibold text-slate-700">
+            선택된 파일: {selectedFile.name}
+          </p>
+        )}
+        <button
+          type="button"
+          onClick={handleUpload}
+          disabled={!selectedFile || isUploading}
+          className="w-fit rounded-md bg-signal-orange px-4 py-2 text-sm font-bold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-slate-400"
+        >
+          {isUploading ? '업로드 중...' : '파일 업로드'}
+        </button>
+      </div>
+
+      <label className="mt-4 block">
+        <span className="text-sm font-bold text-navy-900">첨부파일 메모</span>
+        <textarea
+          value={attachmentMemo}
+          onChange={(event) => setAttachmentMemo(event.target.value)}
+          rows="4"
+          className="mt-2 w-full rounded-md border border-slate-300 px-4 py-3 text-sm leading-6 outline-none transition focus:border-navy-700 focus:ring-4 focus:ring-navy-100"
+        />
+      </label>
+      <button
+        type="button"
+        onClick={handleMemoSave}
+        disabled={isSavingMemo}
+        className="mt-3 w-fit rounded-md bg-navy-900 px-4 py-2 text-sm font-bold text-white transition hover:bg-navy-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+      >
+        {isSavingMemo ? '저장 중...' : '첨부 메모 저장'}
+      </button>
+
+      {message && (
+        <p className="mt-4 rounded-md bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+          {message}
+        </p>
+      )}
+      {errorMessage && (
+        <p className="mt-4 rounded-md bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+          {errorMessage}
+        </p>
+      )}
+
+      <AttachmentList attachments={attachments} />
+    </div>
+  );
+}
+
+function AttachmentList({ attachments }) {
+  return (
+    <div className="mt-5">
+      <h5 className="text-sm font-black text-navy-900">업로드된 파일 목록</h5>
+      {attachments.length === 0 ? (
+        <p className="mt-2 rounded-md bg-slate-50 px-4 py-3 text-sm text-slate-500">
+          업로드된 첨부파일이 없습니다.
+        </p>
+      ) : (
+        <ul className="mt-3 grid gap-2">
+          {attachments.map((attachment, index) => (
+            <li
+              key={`${attachment.url}-${index}`}
+              className="rounded-md border border-slate-200 bg-slate-50 p-3 text-sm"
+            >
+              <div className="font-bold text-navy-900">
+                {attachment.name || '첨부파일'}
+              </div>
+              <div className="mt-1 text-slate-500">
+                업로드일: {formatDate(attachment.uploadedAt)}
+              </div>
+              {attachment.url && (
+                <a
+                  href={attachment.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-2 inline-flex text-sm font-bold text-signal-orange hover:text-orange-700"
+                >
+                  파일 열기
+                </a>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -374,4 +596,18 @@ function formatEstimateAmount(amount) {
     currency: 'KRW',
     maximumFractionDigits: 0,
   }).format(numericAmount);
+}
+
+function formatDate(dateValue) {
+  if (!dateValue) {
+    return '-';
+  }
+
+  return new Intl.DateTimeFormat('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(dateValue));
 }
