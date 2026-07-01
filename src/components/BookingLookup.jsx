@@ -49,15 +49,25 @@ export default function BookingLookup() {
   const [hasSearched, setHasSearched] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [lookupError, setLookupError] = useState('');
+  const [lookupNotice, setLookupNotice] = useState('');
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setHasSearched(true);
-    setIsLoading(true);
+    setIsLoading(false);
     setLookupError('');
+    setLookupNotice('');
     setLookupResults([]);
 
+    if (isCustomerNameOnlyLookup({ receiptNumber, phone, customerName })) {
+      setLookupNotice(
+        '이름만으로는 조회할 수 없습니다. 정확한 조회를 위해 연락처도 함께 입력해 주세요.',
+      );
+      return;
+    }
+
     try {
+      setIsLoading(true);
       const reservations = await lookupCustomerReservations({
         receiptNumber,
         phone,
@@ -139,6 +149,10 @@ export default function BookingLookup() {
               </button>
             </form>
 
+            <p className="mt-4 rounded-md bg-slate-50 px-4 py-3 text-sm font-semibold leading-6 text-slate-600">
+              개인정보 보호를 위해 조회 결과의 일부 정보는 마스킹되어 표시됩니다.
+            </p>
+
             {isLoading && (
               <p className="mt-5 rounded-md bg-blue-50 px-4 py-3 text-sm font-semibold leading-6 text-blue-700">
                 조회 중입니다...
@@ -151,7 +165,13 @@ export default function BookingLookup() {
               </p>
             )}
 
-            {hasSearched && !isLoading && !lookupError && !lookupResults.length && (
+            {lookupNotice && (
+              <p className="mt-5 rounded-md bg-orange-50 px-4 py-3 text-sm font-semibold leading-6 text-orange-700">
+                {lookupNotice}
+              </p>
+            )}
+
+            {hasSearched && !isLoading && !lookupError && !lookupNotice && !lookupResults.length && (
               <p className="mt-5 rounded-md bg-red-50 px-4 py-3 text-sm font-semibold leading-6 text-red-700">
                 입력하신 정보와 일치하는 신청 내역을 찾을 수 없습니다.
               </p>
@@ -177,6 +197,7 @@ export default function BookingLookup() {
 
 function LookupResult({ reservation, fallbackIndex }) {
   const status = reservation.status || DEFAULT_STATUS;
+  // TODO: customer_notice 컬럼이 분리되면 customerNotice를 우선 사용하고 adminMemo fallback을 제거합니다.
   const customerNotice = reservation.customerNotice || reservation.adminMemo || '';
 
   return (
@@ -185,7 +206,7 @@ function LookupResult({ reservation, fallbackIndex }) {
         <div>
           <p className="text-xs font-bold text-signal-orange">조회 결과</p>
           <h3 className="mt-1 text-xl font-black text-navy-900">
-            {reservation.customerName} 고객님의 진행 상태
+            {maskCustomerName(reservation.customerName)} 고객님의 진행 상태
           </h3>
         </div>
         <StatusBadge status={status} />
@@ -196,8 +217,8 @@ function LookupResult({ reservation, fallbackIndex }) {
           label="접수번호"
           value={getReceiptNumber(reservation, fallbackIndex)}
         />
-        <InfoItem label="고객명" value={reservation.customerName} />
-        <InfoItem label="연락처" value={reservation.phone} />
+        <InfoItem label="고객명" value={maskCustomerName(reservation.customerName)} />
+        <InfoItem label="연락처" value={maskPhone(reservation.phone)} />
         <InfoItem label="서비스 종류" value={reservation.serviceType} />
         <InfoItem label="차량 종류" value={reservation.vehicleType} />
         <InfoItem label="지역" value={reservation.region} />
@@ -299,6 +320,46 @@ function InfoItem({ label, value }) {
       </p>
     </div>
   );
+}
+
+function isCustomerNameOnlyLookup({ receiptNumber, phone, customerName }) {
+  return Boolean(
+    customerName.trim() && !receiptNumber.trim() && !phone.trim(),
+  );
+}
+
+function maskPhone(phone) {
+  const value = String(phone ?? '');
+
+  if (!value) {
+    return '';
+  }
+
+  if (value.includes('-')) {
+    const parts = value.split('-');
+
+    if (parts.length >= 3) {
+      return `${parts[0]}-****-${parts.slice(2).join('-')}`;
+    }
+  }
+
+  const digits = value.replace(/\D/g, '');
+
+  if (digits.length >= 7) {
+    return `${digits.slice(0, 3)}****${digits.slice(-4)}`;
+  }
+
+  return value.replace(/.(?=.{2})/g, '*');
+}
+
+function maskCustomerName(customerName) {
+  const value = String(customerName ?? '').trim();
+
+  if (!value) {
+    return '';
+  }
+
+  return `${value[0]}${'*'.repeat(Math.max(value.length - 1, 1))}`;
 }
 
 function formatEstimateAmount(amount) {

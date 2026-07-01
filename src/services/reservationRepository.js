@@ -164,78 +164,42 @@ export async function lookupCustomerReservations({
   const normalizedPhone = phone.trim();
   const phoneCandidates = createPhoneCandidates(normalizedPhone);
   const normalizedCustomerName = customerName.trim();
-  const queryPromises = [];
 
-  if (normalizedCustomerName && phoneCandidates.length) {
+  if (normalizedReceiptNumber) {
     const { data, error } = await supabase
       .from(RESERVATIONS_TABLE)
       .select('*')
-      .eq('customer_name', normalizedCustomerName)
-      .in('phone', phoneCandidates)
+      .eq('receipt_number', normalizedReceiptNumber)
       .order('created_at', { ascending: false });
 
     if (error) {
       throw error;
     }
 
-    if (data?.length) {
-      return data.map(mapSupabaseRowToReservation);
-    }
+    return (data ?? []).map(mapSupabaseRowToReservation);
   }
 
-  getLookupSearchValues({
-    receiptNumber: normalizedReceiptNumber,
-    phone: normalizedPhone,
-    customerName: normalizedCustomerName,
-  }).forEach((searchValue) => {
-    const searchPhoneCandidates = createPhoneCandidates(searchValue);
-
-    queryPromises.push(
-      supabase
-        .from(RESERVATIONS_TABLE)
-        .select('*')
-        .eq('receipt_number', searchValue.toUpperCase())
-        .order('created_at', { ascending: false }),
-    );
-
-    if (searchPhoneCandidates.length) {
-      queryPromises.push(
-        supabase
-          .from(RESERVATIONS_TABLE)
-          .select('*')
-          .in('phone', searchPhoneCandidates)
-          .order('created_at', { ascending: false }),
-      );
-    }
-
-    queryPromises.push(
-      supabase
-        .from(RESERVATIONS_TABLE)
-        .select('*')
-        .ilike('customer_name', `%${searchValue}%`)
-        .order('created_at', { ascending: false }),
-    );
-  });
-
-  if (!queryPromises.length) {
+  if (!phoneCandidates.length) {
     return [];
   }
 
-  const responses = await Promise.all(queryPromises);
-  const failedResponse = responses.find((response) => response.error);
+  let query = supabase
+    .from(RESERVATIONS_TABLE)
+    .select('*')
+    .in('phone', phoneCandidates)
+    .order('created_at', { ascending: false });
 
-  if (failedResponse?.error) {
-    throw failedResponse.error;
+  if (normalizedCustomerName) {
+    query = query.ilike('customer_name', `%${normalizedCustomerName}%`);
   }
 
-  const uniqueRows = new Map();
-  responses
-    .flatMap((response) => response.data ?? [])
-    .forEach((row) => {
-      uniqueRows.set(row.id ?? row.receipt_number, row);
-    });
+  const { data, error } = await query;
 
-  return Array.from(uniqueRows.values()).map(mapSupabaseRowToReservation);
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []).map(mapSupabaseRowToReservation);
 }
 
 export async function updateReservationMemo(reservationId, adminMemo, reservation) {
@@ -433,12 +397,6 @@ function createPhoneCandidates(phone) {
   }
 
   return Array.from(candidates).filter(Boolean);
-}
-
-function getLookupSearchValues({ receiptNumber, phone, customerName }) {
-  return Array.from(
-    new Set([receiptNumber, phone, customerName].map((value) => value.trim())),
-  ).filter(Boolean);
 }
 
 async function updateReservation(reservationId, patch) {
