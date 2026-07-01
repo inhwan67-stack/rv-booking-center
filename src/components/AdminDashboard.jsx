@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Download, RefreshCw, RotateCcw, Search, X } from 'lucide-react';
+import { AlertTriangle, Download, LogOut, RefreshCw, RotateCcw, Search, X } from 'lucide-react';
 import {
   getDesiredDate,
   getReceiptNumber,
@@ -39,6 +39,7 @@ export default function AdminDashboard({
   onReservationUpdate,
   onReservationsReset,
   onReservationsExport,
+  onAdminLogout,
 }) {
   const [selectedReservation, setSelectedReservation] = useState(null);
   const [serviceFilter, setServiceFilter] = useState('전체');
@@ -148,6 +149,14 @@ export default function AdminDashboard({
             >
               <Download size={16} />
               CSV 다운로드
+            </button>
+            <button
+              type="button"
+              onClick={onAdminLogout}
+              className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
+            >
+              <LogOut size={16} />
+              관리자 로그아웃
             </button>
             <button
               type="button"
