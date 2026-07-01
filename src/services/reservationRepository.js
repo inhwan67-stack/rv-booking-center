@@ -25,6 +25,9 @@ export function mapReservationToSupabaseRow(reservation) {
     attachment_note: reservation.attachmentNote,
     attachment_urls: reservation.attachmentUrls,
     attachment_memo: reservation.attachmentMemo,
+    attachment_status: reservation.attachmentStatus,
+    attachment_checked_at: reservation.attachmentCheckedAt,
+    attachment_admin_note: reservation.attachmentAdminNote,
     status: reservation.status,
     admin_memo: reservation.adminMemo,
     base_amount: reservation.baseAmount,
@@ -62,6 +65,9 @@ export function mapSupabaseRowToReservation(row) {
     attachmentNote: row.attachment_note,
     attachmentUrls: Array.isArray(row.attachment_urls) ? row.attachment_urls : [],
     attachmentMemo: row.attachment_memo ?? '',
+    attachmentStatus: row.attachment_status ?? '미확인',
+    attachmentCheckedAt: row.attachment_checked_at ?? '',
+    attachmentAdminNote: row.attachment_admin_note ?? '',
     status: row.status,
     adminMemo: row.admin_memo,
     customerNotice: row.customer_notice ?? row.admin_memo ?? '',
@@ -278,6 +284,40 @@ export async function updateReservationAttachmentMemo(reservation, attachmentMem
   return updateReservationAttachments(reservation, { attachmentMemo });
 }
 
+export async function updateReservationAttachmentStatus(
+  reservation,
+  attachmentInfo,
+) {
+  const checkedAt = new Date().toISOString();
+  const supabaseUpdated = await updateReservationAttachmentStatusInSupabase(
+    reservation,
+    {
+      ...attachmentInfo,
+      attachmentCheckedAt: checkedAt,
+    },
+  );
+
+  if (!supabaseUpdated) {
+    return {
+      reservation: findReservationByIdentifier(
+        reservation?.id ?? reservation?.receiptNumber,
+      ),
+      supabaseUpdated: false,
+    };
+  }
+
+  return {
+    reservation: await updateReservation(
+      reservation?.id ?? reservation?.receiptNumber,
+      {
+        ...attachmentInfo,
+        attachmentCheckedAt: checkedAt,
+      },
+    ),
+    supabaseUpdated: true,
+  };
+}
+
 export async function updateReservationMemo(reservationId, adminMemo, reservation) {
   const supabaseUpdated = await updateReservationMemoInSupabase(
     reservation ?? { id: reservationId },
@@ -434,6 +474,42 @@ async function updateReservationPriceInSupabase(reservation, priceInfo) {
     return true;
   } catch (error) {
     console.error('Supabase reservation price update failed', {
+      code: error?.code,
+      message: error?.message,
+      details: error?.details,
+      hint: error?.hint,
+      status: error?.status,
+    });
+    return false;
+  }
+}
+
+async function updateReservationAttachmentStatusInSupabase(
+  reservation,
+  attachmentInfo,
+) {
+  if (!isSupabaseConfigured || !supabase) {
+    return false;
+  }
+
+  try {
+    const query = supabase.from(RESERVATIONS_TABLE).update({
+      attachment_status: attachmentInfo.attachmentStatus,
+      attachment_checked_at: attachmentInfo.attachmentCheckedAt,
+      attachment_admin_note: attachmentInfo.attachmentAdminNote,
+    });
+
+    const { error } = reservation?.id
+      ? await query.eq('id', reservation.id)
+      : await query.eq('receipt_number', reservation.receiptNumber);
+
+    if (error) {
+      throw error;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Supabase reservation attachment status update failed', {
       code: error?.code,
       message: error?.message,
       details: error?.details,

@@ -43,6 +43,9 @@ export const VEHICLE_TYPES = [
  * @property {string} attachmentNote
  * @property {Array=} attachmentUrls
  * @property {string=} attachmentMemo
+ * @property {string=} attachmentStatus
+ * @property {string=} attachmentCheckedAt
+ * @property {string=} attachmentAdminNote
  * @property {string} status
  * @property {string} adminMemo
  * @property {number=} baseAmount
@@ -82,6 +85,9 @@ export function createReservationFromForm(formData) {
     attachmentNote: buildAttachmentNote(formData, hasAttachment),
     attachmentUrls: [],
     attachmentMemo: '',
+    attachmentStatus: '미확인',
+    attachmentCheckedAt: '',
+    attachmentAdminNote: '',
     status: '접수 완료',
     adminMemo: '신규 접수 건입니다.',
     baseAmount: 0,
@@ -125,6 +131,9 @@ export function normalizeReservation(reservation) {
       : '첨부자료 없음',
     attachmentUrls: reservation.attachmentUrls ?? [],
     attachmentMemo: reservation.attachmentMemo ?? '',
+    attachmentStatus: reservation.attachmentStatus ?? '미확인',
+    attachmentCheckedAt: reservation.attachmentCheckedAt ?? '',
+    attachmentAdminNote: reservation.attachmentAdminNote ?? '',
     status: normalizeStatus(reservation.processStatus),
     adminMemo: reservation.adminMemo ?? '신규 접수 건입니다.',
     baseAmount: reservation.baseAmount ?? 0,

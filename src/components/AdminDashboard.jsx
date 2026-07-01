@@ -10,6 +10,13 @@ import { bookingStatuses, serviceOptions } from '../types/booking.js';
 const SERVICE_FILTERS = ['전체', ...serviceOptions];
 const STATUS_FILTERS = ['전체 상태', ...bookingStatuses];
 const PAYMENT_STATUSES = ['미결제', '입금대기', '결제완료', '환불', '취소'];
+const ATTACHMENT_STATUSES = [
+  '미확인',
+  '서류 검토 중',
+  '보완 요청',
+  '확인 완료',
+  '반려',
+];
 const SUMMARY_STATUSES = [
   '전체 접수',
   '접수 완료',
@@ -321,14 +328,23 @@ function ReservationDetailModal({ reservation, onClose, onReservationUpdate }) {
     reservation.paymentStatus || PAYMENT_STATUSES[0],
   );
   const [priceMemo, setPriceMemo] = useState(reservation.priceMemo || '');
+  const [attachmentStatus, setAttachmentStatus] = useState(
+    reservation.attachmentStatus || ATTACHMENT_STATUSES[0],
+  );
+  const [attachmentAdminNote, setAttachmentAdminNote] = useState(
+    reservation.attachmentAdminNote || '',
+  );
   const [statusSaveError, setStatusSaveError] = useState('');
   const [memoSaveMessage, setMemoSaveMessage] = useState('');
   const [memoSaveError, setMemoSaveError] = useState('');
   const [priceSaveMessage, setPriceSaveMessage] = useState('');
   const [priceSaveError, setPriceSaveError] = useState('');
+  const [attachmentSaveMessage, setAttachmentSaveMessage] = useState('');
+  const [attachmentSaveError, setAttachmentSaveError] = useState('');
   const [isSavingStatus, setIsSavingStatus] = useState(false);
   const [isSavingMemo, setIsSavingMemo] = useState(false);
   const [isSavingPrice, setIsSavingPrice] = useState(false);
+  const [isSavingAttachmentStatus, setIsSavingAttachmentStatus] = useState(false);
 
   const handleStatusChange = async (nextStatus) => {
     setStatusSaveError('');
@@ -427,6 +443,31 @@ function ReservationDetailModal({ reservation, onClose, onReservationUpdate }) {
     setIsSavingPrice(false);
   };
 
+  const handleAttachmentStatusSave = async () => {
+    setAttachmentSaveMessage('');
+    setAttachmentSaveError('');
+    setIsSavingAttachmentStatus(true);
+
+    const result = await onReservationUpdate(
+      getReservationIdentifier(reservation),
+      {
+        attachmentStatus,
+        attachmentAdminNote,
+      },
+      reservation,
+    );
+
+    if (result?.success === false) {
+      setAttachmentSaveError(
+        '첨부서류 상태 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.',
+      );
+    } else {
+      setAttachmentSaveMessage('첨부서류 상태가 저장되었습니다.');
+    }
+
+    setIsSavingAttachmentStatus(false);
+  };
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-navy-900/55 p-4">
       <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-xl bg-white shadow-soft">
@@ -467,13 +508,67 @@ function ReservationDetailModal({ reservation, onClose, onReservationUpdate }) {
             value={reservation.attachmentNote || '-'}
           />
           <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <h4 className="text-sm font-black text-navy-900">첨부파일</h4>
+            <h4 className="text-sm font-black text-navy-900">첨부서류 관리</h4>
             <DetailItem
-              label="첨부파일 메모"
+              label="고객 첨부 메모"
               value={reservation.attachmentMemo || '-'}
               multiline
             />
             <AdminAttachmentList attachments={reservation.attachmentUrls ?? []} />
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <label className="block">
+                <span className="text-sm font-bold text-navy-900">
+                  첨부서류 상태
+                </span>
+                <select
+                  value={attachmentStatus}
+                  onChange={(event) => setAttachmentStatus(event.target.value)}
+                  className="mt-2 w-full rounded-md border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-navy-700 focus:ring-4 focus:ring-navy-100"
+                >
+                  {ATTACHMENT_STATUSES.map((status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <DetailItem
+                label="첨부서류 확인일"
+                value={formatDateOnly(reservation.attachmentCheckedAt)}
+              />
+              <label className="block md:col-span-2">
+                <span className="text-sm font-bold text-navy-900">
+                  첨부서류 내부 메모
+                </span>
+                <textarea
+                  value={attachmentAdminNote}
+                  onChange={(event) => setAttachmentAdminNote(event.target.value)}
+                  rows="4"
+                  className="mt-2 w-full rounded-md border border-slate-300 bg-white px-4 py-3 text-sm leading-6 outline-none transition focus:border-navy-700 focus:ring-4 focus:ring-navy-100"
+                  placeholder="고객에게 안내해도 되는 보완 요청 또는 확인 내용을 입력하세요."
+                />
+              </label>
+            </div>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={handleAttachmentStatusSave}
+                disabled={isSavingAttachmentStatus}
+                className="rounded-md bg-signal-orange px-4 py-2 text-sm font-bold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-slate-400"
+              >
+                {isSavingAttachmentStatus ? '저장 중...' : '첨부서류 상태 저장'}
+              </button>
+              {attachmentSaveMessage && (
+                <p className="text-sm font-semibold text-emerald-700">
+                  {attachmentSaveMessage}
+                </p>
+              )}
+              {attachmentSaveError && (
+                <p className="text-sm font-semibold text-red-700">
+                  {attachmentSaveError}
+                </p>
+              )}
+            </div>
           </div>
           <label className="block">
             <span className="text-sm font-bold text-navy-900">현재 상태</span>
@@ -704,6 +799,9 @@ function AdminAttachmentList({ attachments }) {
             {attachment.name || '첨부파일'}
           </div>
           <div className="mt-1 text-slate-500">
+            파일 형식: {attachment.type || '-'}
+          </div>
+          <div className="mt-1 text-slate-500">
             업로드일: {formatDate(attachment.uploadedAt)}
           </div>
           {attachment.url && (
@@ -776,6 +874,18 @@ function formatDate(dateValue) {
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
+  }).format(new Date(dateValue));
+}
+
+function formatDateOnly(dateValue) {
+  if (!dateValue) {
+    return '-';
+  }
+
+  return new Intl.DateTimeFormat('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
   }).format(new Date(dateValue));
 }
 

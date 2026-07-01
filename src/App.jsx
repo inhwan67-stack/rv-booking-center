@@ -21,6 +21,7 @@ import {
 } from './services/reservationStorage.js';
 import {
   fetchReservationsFromSupabase,
+  updateReservationAttachmentStatus,
   updateReservationMemo,
   updateReservationPrice,
   updateReservationStatus,
@@ -122,6 +123,29 @@ export default function App() {
       if (!result.supabaseUpdated) {
         return { success: false };
       }
+    }
+
+    if (Object.prototype.hasOwnProperty.call(patch, 'attachmentStatus')) {
+      const reservation =
+        reservationArg ??
+        reservations.find(
+          (item) =>
+            item.id === reservationId || item.receiptNumber === reservationId,
+        );
+      const result = await updateReservationAttachmentStatus(
+        reservation ?? { id: reservationId },
+        patch,
+      );
+
+      if (!result.supabaseUpdated) {
+        return { success: false };
+      }
+
+      applyReservationPatch(reservationId, {
+        ...patch,
+        attachmentCheckedAt: result.reservation?.attachmentCheckedAt,
+      });
+      return { success: true };
     }
 
     applyReservationPatch(reservationId, patch);

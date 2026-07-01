@@ -255,6 +255,14 @@ function LookupResult({ reservation, fallbackIndex, onReservationChange }) {
           label="결제 상태"
           value={reservation.paymentStatus || '미결제'}
         />
+        <InfoItem
+          label="첨부서류 상태"
+          value={reservation.attachmentStatus || '미확인'}
+        />
+        <InfoItem
+          label="첨부서류 확인일"
+          value={formatDateOnly(reservation.attachmentCheckedAt)}
+        />
       </div>
 
       <div className="mt-5 rounded-lg border border-orange-100 bg-orange-50/70 p-4">
@@ -267,6 +275,20 @@ function LookupResult({ reservation, fallbackIndex, onReservationChange }) {
             customerMessages[DEFAULT_STATUS]}
         </p>
       </div>
+
+      {reservation.attachmentAdminNote && (
+        <div className="mt-5 rounded-lg border border-blue-100 bg-blue-50/70 p-4">
+          <strong className="text-sm font-black text-navy-900">
+            첨부서류 안내
+          </strong>
+          <p className="mt-2 text-sm leading-6 text-slate-700">
+            {
+              // TODO: customer_notice 컬럼이 분리되면 고객 공개 안내 문구를 별도 컬럼으로 이전합니다.
+              reservation.attachmentAdminNote
+            }
+          </p>
+        </div>
+      )}
 
       <AttachmentUploadPanel
         reservation={reservation}
@@ -609,5 +631,17 @@ function formatDate(dateValue) {
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
+  }).format(new Date(dateValue));
+}
+
+function formatDateOnly(dateValue) {
+  if (!dateValue) {
+    return '-';
+  }
+
+  return new Intl.DateTimeFormat('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
   }).format(new Date(dateValue));
 }
