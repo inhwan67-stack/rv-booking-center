@@ -46,6 +46,9 @@ export function exportReservationsToCsv(reservations) {
     '차량번호',
     '차량 모델명',
     '현재 상태',
+    '최종 견적 금액',
+    '결제 상태',
+    '금액 메모',
     '담당자 메모',
     '문의 내용',
   ];
@@ -62,6 +65,9 @@ export function exportReservationsToCsv(reservations) {
     reservation.vehicleNumber,
     reservation.vehicleModel,
     reservation.status,
+    reservation.finalAmount,
+    reservation.paymentStatus,
+    reservation.priceMemo,
     reservation.adminMemo,
     reservation.message,
   ]);

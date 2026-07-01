@@ -203,6 +203,14 @@ function LookupResult({ reservation, fallbackIndex }) {
         <InfoItem label="지역" value={reservation.region} />
         <InfoItem label="희망 날짜" value={getDesiredDate(reservation)} />
         <InfoItem label="현재 상태" value={status} />
+        <InfoItem
+          label="최종 견적 금액"
+          value={formatEstimateAmount(reservation.finalAmount)}
+        />
+        <InfoItem
+          label="결제 상태"
+          value={reservation.paymentStatus || '미결제'}
+        />
       </div>
 
       <div className="mt-5 rounded-lg border border-orange-100 bg-orange-50/70 p-4">
@@ -291,4 +299,18 @@ function InfoItem({ label, value }) {
       </p>
     </div>
   );
+}
+
+function formatEstimateAmount(amount) {
+  const numericAmount = Number(amount) || 0;
+
+  if (numericAmount <= 0) {
+    return '견적 준비 중';
+  }
+
+  return new Intl.NumberFormat('ko-KR', {
+    style: 'currency',
+    currency: 'KRW',
+    maximumFractionDigits: 0,
+  }).format(numericAmount);
 }

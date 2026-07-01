@@ -24,6 +24,12 @@ export function mapReservationToSupabaseRow(reservation) {
     attachment_note: reservation.attachmentNote,
     status: reservation.status,
     admin_memo: reservation.adminMemo,
+    base_amount: reservation.baseAmount,
+    extra_amount: reservation.extraAmount,
+    discount_amount: reservation.discountAmount,
+    final_amount: reservation.finalAmount,
+    payment_status: reservation.paymentStatus,
+    price_memo: reservation.priceMemo,
     departure_location: reservation.departureLocation,
     arrival_location: reservation.arrivalLocation,
     towing_purpose: reservation.towingPurpose,
@@ -54,6 +60,12 @@ export function mapSupabaseRowToReservation(row) {
     status: row.status,
     adminMemo: row.admin_memo,
     customerNotice: row.customer_notice ?? row.admin_memo ?? '',
+    baseAmount: row.base_amount ?? 0,
+    extraAmount: row.extra_amount ?? 0,
+    discountAmount: row.discount_amount ?? 0,
+    finalAmount: row.final_amount ?? 0,
+    paymentStatus: row.payment_status ?? '미결제',
+    priceMemo: row.price_memo ?? '',
     departureLocation: row.departure_location,
     arrivalLocation: row.arrival_location,
     towingPurpose: row.towing_purpose,
@@ -220,6 +232,28 @@ export async function updateReservationMemo(reservationId, adminMemo, reservatio
   };
 }
 
+export async function updateReservationPrice(reservation, priceInfo) {
+  const supabaseUpdated = await updateReservationPriceInSupabase(
+    reservation,
+    priceInfo,
+  );
+
+  if (!supabaseUpdated) {
+    return {
+      reservation: findReservationByIdentifier(reservation?.id ?? reservation?.receiptNumber),
+      supabaseUpdated: false,
+    };
+  }
+
+  return {
+    reservation: await updateReservation(
+      reservation?.id ?? reservation?.receiptNumber,
+      priceInfo,
+    ),
+    supabaseUpdated: true,
+  };
+}
+
 async function insertReservationToSupabase(reservation) {
   if (!isSupabaseConfigured || !supabase) {
     console.info('Supabase is not configured. Reservation saved to localStorage only.');
@@ -307,6 +341,42 @@ async function updateReservationMemoInSupabase(reservation, adminMemo) {
   }
 }
 
+async function updateReservationPriceInSupabase(reservation, priceInfo) {
+  if (!isSupabaseConfigured || !supabase) {
+    return false;
+  }
+
+  try {
+    const query = supabase.from(RESERVATIONS_TABLE).update({
+      base_amount: priceInfo.baseAmount,
+      extra_amount: priceInfo.extraAmount,
+      discount_amount: priceInfo.discountAmount,
+      final_amount: priceInfo.finalAmount,
+      payment_status: priceInfo.paymentStatus,
+      price_memo: priceInfo.priceMemo,
+    });
+
+    const { error } = reservation?.id
+      ? await query.eq('id', reservation.id)
+      : await query.eq('receipt_number', reservation.receiptNumber);
+
+    if (error) {
+      throw error;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Supabase reservation price update failed', {
+      code: error?.code,
+      message: error?.message,
+      details: error?.details,
+      hint: error?.hint,
+      status: error?.status,
+    });
+    return false;
+  }
+}
+
 function saveReservationToLocalStorage(reservation) {
   const reservations = loadReservations();
   const nextReservations = reservations.some((item) => item.id === reservation.id)
@@ -341,8 +411,17 @@ function createPhoneCandidates(phone) {
 async function updateReservation(reservationId, patch) {
   const reservations = loadReservations();
   const nextReservations = reservations.map((reservation) =>
-    reservation.id === reservationId ? { ...reservation, ...patch } : reservation,
+    reservation.id === reservationId || reservation.receiptNumber === reservationId
+      ? { ...reservation, ...patch }
+      : reservation,
   );
   saveReservations(nextReservations);
-  return nextReservations.find((reservation) => reservation.id === reservationId);
+  return findReservationByIdentifier(reservationId, nextReservations);
+}
+
+function findReservationByIdentifier(identifier, reservations = loadReservations()) {
+  return reservations.find(
+    (reservation) =>
+      reservation.id === identifier || reservation.receiptNumber === identifier,
+  );
 }

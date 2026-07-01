@@ -22,6 +22,7 @@ import {
 import {
   fetchReservationsFromSupabase,
   updateReservationMemo,
+  updateReservationPrice,
   updateReservationStatus,
 } from './services/reservationRepository.js';
 
@@ -61,10 +62,13 @@ export default function App() {
   const applyReservationPatch = useCallback((reservationId, patch) => {
     setReservations((current) => {
       const targetReservation = current.find(
-        (reservation) => reservation.id === reservationId,
+        (reservation) =>
+          reservation.id === reservationId ||
+          reservation.receiptNumber === reservationId,
       );
       const nextReservations = current.map((reservation) =>
         reservation.id === reservationId ||
+        reservation.receiptNumber === reservationId ||
         (!reservation.id &&
           targetReservation?.receiptNumber &&
           reservation.receiptNumber === targetReservation.receiptNumber)
@@ -76,7 +80,7 @@ export default function App() {
     });
   }, []);
 
-  const handleReservationUpdate = async (reservationId, patch) => {
+  const handleReservationUpdate = async (reservationId, patch, reservationArg) => {
     if (Object.prototype.hasOwnProperty.call(patch, 'status')) {
       const result = await updateReservationStatus(reservationId, patch.status);
 
@@ -86,11 +90,33 @@ export default function App() {
     }
 
     if (Object.prototype.hasOwnProperty.call(patch, 'adminMemo')) {
-      const reservation = reservations.find((item) => item.id === reservationId);
+      const reservation =
+        reservationArg ??
+        reservations.find(
+          (item) =>
+            item.id === reservationId || item.receiptNumber === reservationId,
+        );
       const result = await updateReservationMemo(
         reservationId,
         patch.adminMemo,
         reservation,
+      );
+
+      if (!result.supabaseUpdated) {
+        return { success: false };
+      }
+    }
+
+    if (Object.prototype.hasOwnProperty.call(patch, 'finalAmount')) {
+      const reservation =
+        reservationArg ??
+        reservations.find(
+          (item) =>
+            item.id === reservationId || item.receiptNumber === reservationId,
+        );
+      const result = await updateReservationPrice(
+        reservation ?? { id: reservationId },
+        patch,
       );
 
       if (!result.supabaseUpdated) {

@@ -9,6 +9,7 @@ import { bookingStatuses, serviceOptions } from '../types/booking.js';
 
 const SERVICE_FILTERS = ['전체', ...serviceOptions];
 const STATUS_FILTERS = ['전체 상태', ...bookingStatuses];
+const PAYMENT_STATUSES = ['미결제', '입금대기', '결제완료', '환불', '취소'];
 const SUMMARY_STATUSES = [
   '전체 접수',
   '접수 완료',
@@ -85,15 +86,17 @@ export default function AdminDashboard({
     });
   }, [reservations, searchKeyword, serviceFilter, statusFilter]);
 
-  const handleReservationUpdate = async (reservationId, patch) => {
-    const result = await onReservationUpdate?.(reservationId, patch);
+  const handleReservationUpdate = async (reservationId, patch, reservation) => {
+    const result = await onReservationUpdate?.(reservationId, patch, reservation);
 
     if (result?.success === false) {
       return result;
     }
 
     setSelectedReservation((current) =>
-      current?.id === reservationId ? { ...current, ...patch } : current,
+      current?.id === reservationId || current?.receiptNumber === reservationId
+        ? { ...current, ...patch }
+        : current,
     );
     return { success: true };
   };
@@ -296,19 +299,39 @@ export default function AdminDashboard({
 
 function ReservationDetailModal({ reservation, onClose, onReservationUpdate }) {
   const [memo, setMemo] = useState(reservation.adminMemo || '');
+  const [baseAmount, setBaseAmount] = useState(toAmountInput(reservation.baseAmount));
+  const [extraAmount, setExtraAmount] = useState(toAmountInput(reservation.extraAmount));
+  const [discountAmount, setDiscountAmount] = useState(
+    toAmountInput(reservation.discountAmount),
+  );
+  const [finalAmount, setFinalAmount] = useState(toAmountInput(reservation.finalAmount));
+  const [isFinalAmountEdited, setIsFinalAmountEdited] = useState(
+    hasPositiveAmount(reservation.finalAmount),
+  );
+  const [paymentStatus, setPaymentStatus] = useState(
+    reservation.paymentStatus || PAYMENT_STATUSES[0],
+  );
+  const [priceMemo, setPriceMemo] = useState(reservation.priceMemo || '');
   const [statusSaveError, setStatusSaveError] = useState('');
   const [memoSaveMessage, setMemoSaveMessage] = useState('');
   const [memoSaveError, setMemoSaveError] = useState('');
+  const [priceSaveMessage, setPriceSaveMessage] = useState('');
+  const [priceSaveError, setPriceSaveError] = useState('');
   const [isSavingStatus, setIsSavingStatus] = useState(false);
   const [isSavingMemo, setIsSavingMemo] = useState(false);
+  const [isSavingPrice, setIsSavingPrice] = useState(false);
 
   const handleStatusChange = async (nextStatus) => {
     setStatusSaveError('');
     setIsSavingStatus(true);
 
-    const result = await onReservationUpdate(reservation.id, {
-      status: nextStatus,
-    });
+    const result = await onReservationUpdate(
+      getReservationIdentifier(reservation),
+      {
+        status: nextStatus,
+      },
+      reservation,
+    );
 
     if (result?.success === false) {
       setStatusSaveError('상태 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.');
@@ -322,9 +345,13 @@ function ReservationDetailModal({ reservation, onClose, onReservationUpdate }) {
     setMemoSaveError('');
     setIsSavingMemo(true);
 
-    const result = await onReservationUpdate(reservation.id, {
-      adminMemo: memo,
-    });
+    const result = await onReservationUpdate(
+      getReservationIdentifier(reservation),
+      {
+        adminMemo: memo,
+      },
+      reservation,
+    );
 
     if (result?.success === false) {
       setMemoSaveError('메모 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.');
@@ -333,6 +360,62 @@ function ReservationDetailModal({ reservation, onClose, onReservationUpdate }) {
     }
 
     setIsSavingMemo(false);
+  };
+
+  const handleAmountChange = (setter) => (event) => {
+    const nextValue = sanitizeAmountInput(event.target.value);
+    setter(nextValue);
+
+    if (!isFinalAmountEdited) {
+      const nextBaseAmount = setter === setBaseAmount ? nextValue : baseAmount;
+      const nextExtraAmount = setter === setExtraAmount ? nextValue : extraAmount;
+      const nextDiscountAmount =
+        setter === setDiscountAmount ? nextValue : discountAmount;
+
+      setFinalAmount(
+        String(
+          calculateFinalAmount(
+            nextBaseAmount,
+            nextExtraAmount,
+            nextDiscountAmount,
+          ),
+        ),
+      );
+    }
+  };
+
+  const handleFinalAmountChange = (event) => {
+    setIsFinalAmountEdited(true);
+    setFinalAmount(sanitizeAmountInput(event.target.value));
+  };
+
+  const handlePriceSave = async () => {
+    const pricePatch = {
+      baseAmount: toAmountNumber(baseAmount),
+      extraAmount: toAmountNumber(extraAmount),
+      discountAmount: toAmountNumber(discountAmount),
+      finalAmount: toAmountNumber(finalAmount),
+      paymentStatus,
+      priceMemo,
+    };
+
+    setPriceSaveMessage('');
+    setPriceSaveError('');
+    setIsSavingPrice(true);
+
+    const result = await onReservationUpdate(
+      getReservationIdentifier(reservation),
+      pricePatch,
+      reservation,
+    );
+
+    if (result?.success === false) {
+      setPriceSaveError('금액 정보 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+    } else {
+      setPriceSaveMessage('금액 정보가 저장되었습니다.');
+    }
+
+    setIsSavingPrice(false);
   };
 
   return (
@@ -431,6 +514,108 @@ function ReservationDetailModal({ reservation, onClose, onReservationUpdate }) {
               )}
             </div>
           </label>
+          <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-xs font-bold text-signal-orange">
+                  견적/결제 정보
+                </p>
+                <h4 className="mt-1 text-lg font-black text-navy-900">
+                  금액 입력 및 결제 상태
+                </h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsFinalAmountEdited(false);
+                  setFinalAmount(
+                    String(
+                      calculateFinalAmount(
+                        baseAmount,
+                        extraAmount,
+                        discountAmount,
+                      ),
+                    ),
+                  );
+                }}
+                className="w-fit rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-600 transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-700"
+              >
+                최종 금액 자동계산
+              </button>
+            </div>
+
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <AmountInput
+                label="기본 금액"
+                value={baseAmount}
+                onChange={handleAmountChange(setBaseAmount)}
+              />
+              <AmountInput
+                label="추가 금액"
+                value={extraAmount}
+                onChange={handleAmountChange(setExtraAmount)}
+              />
+              <AmountInput
+                label="할인 금액"
+                value={discountAmount}
+                onChange={handleAmountChange(setDiscountAmount)}
+              />
+              <AmountInput
+                label="최종 견적 금액"
+                value={finalAmount}
+                onChange={handleFinalAmountChange}
+              />
+              <label className="block">
+                <span className="text-sm font-bold text-navy-900">
+                  결제 상태
+                </span>
+                <select
+                  value={paymentStatus}
+                  onChange={(event) => setPaymentStatus(event.target.value)}
+                  className="mt-2 w-full rounded-md border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-navy-700 focus:ring-4 focus:ring-navy-100"
+                >
+                  {PAYMENT_STATUSES.map((status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block md:col-span-2">
+                <span className="text-sm font-bold text-navy-900">
+                  금액 메모
+                </span>
+                <textarea
+                  value={priceMemo}
+                  onChange={(event) => setPriceMemo(event.target.value)}
+                  rows="4"
+                  className="mt-2 w-full rounded-md border border-slate-300 bg-white px-4 py-3 text-sm leading-6 outline-none transition focus:border-navy-700 focus:ring-4 focus:ring-navy-100"
+                  placeholder="견적 산정 기준, 추가 비용, 할인 사유 등을 입력하세요."
+                />
+              </label>
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={handlePriceSave}
+                disabled={isSavingPrice}
+                className="rounded-md bg-signal-orange px-4 py-2 text-sm font-bold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-slate-400"
+              >
+                {isSavingPrice ? '저장 중...' : '금액 저장'}
+              </button>
+              {priceSaveMessage && (
+                <p className="text-sm font-semibold text-emerald-700">
+                  {priceSaveMessage}
+                </p>
+              )}
+              {priceSaveError && (
+                <p className="text-sm font-semibold text-red-700">
+                  {priceSaveError}
+                </p>
+              )}
+            </div>
+          </div>
         </div>
 
         <div className="flex justify-end border-t border-slate-200 px-5 py-4">
@@ -481,6 +666,22 @@ function DetailItem({ label, value, multiline = false }) {
   );
 }
 
+function AmountInput({ label, value, onChange }) {
+  return (
+    <label className="block">
+      <span className="text-sm font-bold text-navy-900">{label}</span>
+      <input
+        value={value}
+        onChange={onChange}
+        inputMode="numeric"
+        pattern="[0-9]*"
+        className="mt-2 w-full rounded-md border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-navy-700 focus:ring-4 focus:ring-navy-100"
+        placeholder="0"
+      />
+    </label>
+  );
+}
+
 function StatusBadge({ status }) {
   return (
     <span
@@ -520,4 +721,34 @@ function formatDate(dateValue) {
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(dateValue));
+}
+
+function getReservationIdentifier(reservation) {
+  return reservation.id || reservation.receiptNumber;
+}
+
+function sanitizeAmountInput(value) {
+  return value.replace(/\D/g, '');
+}
+
+function toAmountNumber(value) {
+  return Number(sanitizeAmountInput(String(value ?? ''))) || 0;
+}
+
+function toAmountInput(value) {
+  const amount = toAmountNumber(value);
+  return amount > 0 ? String(amount) : '';
+}
+
+function calculateFinalAmount(baseAmount, extraAmount, discountAmount) {
+  return Math.max(
+    toAmountNumber(baseAmount) +
+      toAmountNumber(extraAmount) -
+      toAmountNumber(discountAmount),
+    0,
+  );
+}
+
+function hasPositiveAmount(value) {
+  return toAmountNumber(value) > 0;
 }
