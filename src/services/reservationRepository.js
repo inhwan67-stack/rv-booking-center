@@ -166,29 +166,56 @@ export async function lookupCustomerReservations({
   const normalizedCustomerName = customerName.trim();
   const queryPromises = [];
 
-  if (normalizedReceiptNumber) {
+  if (normalizedCustomerName && phoneCandidates.length) {
+    const { data, error } = await supabase
+      .from(RESERVATIONS_TABLE)
+      .select('*')
+      .eq('customer_name', normalizedCustomerName)
+      .in('phone', phoneCandidates)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    if (data?.length) {
+      return data.map(mapSupabaseRowToReservation);
+    }
+  }
+
+  getLookupSearchValues({
+    receiptNumber: normalizedReceiptNumber,
+    phone: normalizedPhone,
+    customerName: normalizedCustomerName,
+  }).forEach((searchValue) => {
+    const searchPhoneCandidates = createPhoneCandidates(searchValue);
+
     queryPromises.push(
       supabase
         .from(RESERVATIONS_TABLE)
         .select('*')
-        .eq('receipt_number', normalizedReceiptNumber)
+        .eq('receipt_number', searchValue.toUpperCase())
         .order('created_at', { ascending: false }),
     );
-  }
 
-  if (phoneCandidates.length) {
-    let phoneQuery = supabase
-      .from(RESERVATIONS_TABLE)
-      .select('*')
-      .in('phone', phoneCandidates)
-      .order('created_at', { ascending: false });
-
-    if (normalizedCustomerName) {
-      phoneQuery = phoneQuery.eq('customer_name', normalizedCustomerName);
+    if (searchPhoneCandidates.length) {
+      queryPromises.push(
+        supabase
+          .from(RESERVATIONS_TABLE)
+          .select('*')
+          .in('phone', searchPhoneCandidates)
+          .order('created_at', { ascending: false }),
+      );
     }
 
-    queryPromises.push(phoneQuery);
-  }
+    queryPromises.push(
+      supabase
+        .from(RESERVATIONS_TABLE)
+        .select('*')
+        .ilike('customer_name', `%${searchValue}%`)
+        .order('created_at', { ascending: false }),
+    );
+  });
 
   if (!queryPromises.length) {
     return [];
@@ -406,6 +433,12 @@ function createPhoneCandidates(phone) {
   }
 
   return Array.from(candidates).filter(Boolean);
+}
+
+function getLookupSearchValues({ receiptNumber, phone, customerName }) {
+  return Array.from(
+    new Set([receiptNumber, phone, customerName].map((value) => value.trim())),
+  ).filter(Boolean);
 }
 
 async function updateReservation(reservationId, patch) {
