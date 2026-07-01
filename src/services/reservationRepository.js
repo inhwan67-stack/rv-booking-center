@@ -53,6 +53,7 @@ export function mapSupabaseRowToReservation(row) {
     attachmentNote: row.attachment_note,
     status: row.status,
     adminMemo: row.admin_memo,
+    customerNotice: row.customer_notice ?? row.admin_memo ?? '',
     departureLocation: row.departure_location,
     arrivalLocation: row.arrival_location,
     towingPurpose: row.towing_purpose,
@@ -136,6 +137,66 @@ export async function updateReservationStatus(reservationId, status) {
     reservation: await updateReservation(reservationId, { status }),
     supabaseUpdated: true,
   };
+}
+
+export async function lookupCustomerReservations({
+  receiptNumber = '',
+  phone = '',
+  customerName = '',
+}) {
+  if (!isSupabaseConfigured || !supabase) {
+    return [];
+  }
+
+  const normalizedReceiptNumber = receiptNumber.trim().toUpperCase();
+  const normalizedPhone = phone.trim();
+  const phoneCandidates = createPhoneCandidates(normalizedPhone);
+  const normalizedCustomerName = customerName.trim();
+  const queryPromises = [];
+
+  if (normalizedReceiptNumber) {
+    queryPromises.push(
+      supabase
+        .from(RESERVATIONS_TABLE)
+        .select('*')
+        .eq('receipt_number', normalizedReceiptNumber)
+        .order('created_at', { ascending: false }),
+    );
+  }
+
+  if (phoneCandidates.length) {
+    let phoneQuery = supabase
+      .from(RESERVATIONS_TABLE)
+      .select('*')
+      .in('phone', phoneCandidates)
+      .order('created_at', { ascending: false });
+
+    if (normalizedCustomerName) {
+      phoneQuery = phoneQuery.eq('customer_name', normalizedCustomerName);
+    }
+
+    queryPromises.push(phoneQuery);
+  }
+
+  if (!queryPromises.length) {
+    return [];
+  }
+
+  const responses = await Promise.all(queryPromises);
+  const failedResponse = responses.find((response) => response.error);
+
+  if (failedResponse?.error) {
+    throw failedResponse.error;
+  }
+
+  const uniqueRows = new Map();
+  responses
+    .flatMap((response) => response.data ?? [])
+    .forEach((row) => {
+      uniqueRows.set(row.id ?? row.receipt_number, row);
+    });
+
+  return Array.from(uniqueRows.values()).map(mapSupabaseRowToReservation);
 }
 
 export async function updateReservationMemo(reservationId, adminMemo, reservation) {
@@ -252,6 +313,29 @@ function saveReservationToLocalStorage(reservation) {
     ? reservations
     : [reservation, ...reservations];
   saveReservations(nextReservations);
+}
+
+function createPhoneCandidates(phone) {
+  const compactPhone = phone.replace(/\D/g, '');
+  const candidates = new Set([phone]);
+
+  if (compactPhone) {
+    candidates.add(compactPhone);
+  }
+
+  if (compactPhone.length === 11) {
+    candidates.add(
+      `${compactPhone.slice(0, 3)}-${compactPhone.slice(3, 7)}-${compactPhone.slice(7)}`,
+    );
+  }
+
+  if (compactPhone.length === 10) {
+    candidates.add(
+      `${compactPhone.slice(0, 3)}-${compactPhone.slice(3, 6)}-${compactPhone.slice(6)}`,
+    );
+  }
+
+  return Array.from(candidates).filter(Boolean);
 }
 
 async function updateReservation(reservationId, patch) {
